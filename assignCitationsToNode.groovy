@@ -3,6 +3,7 @@
 // TODO: create two menu items (only the first ExecutionModes gets parsed)
 // TODO: Implement "Jump to reference" function
 // TODO: Check if Zotero is running
+// TODO: implement "Refresh all citations"
 
 @Grab('com.squareup.okhttp3:okhttp:4.9.0')
 
@@ -20,11 +21,8 @@ import org.freeplane.api.Node
 @Field String execCommandEndpoint = "/document/execCommand"
 @Field String respondEndpoint = "/document/respond"
 
-// TODO: persist document ID
-@Field UUID docId = UUID.randomUUID()
-@Field String docIdStr = docId.toString()
-
-@Field String documentData = ""
+@Field final STORAGE_KEY_DOCUMENT_ID = "zotero_document_id"
+@Field final STORAGE_KEY_DOCUMENT_DATA = "zotero_document_data"
 
 @Field Boolean zoteroProcessing = false
 
@@ -54,14 +52,13 @@ def postJson(url, groovyObj) {
 def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
   switch(res.command) {
     case "Application.getActiveDocument":
-      return postJson(zoteroConnectorUrl + respondEndpoint, [documentID:docIdStr, outputFormat: "html", supportedNotes:[]])
+      return postJson(zoteroConnectorUrl + respondEndpoint, [documentID:getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node), outputFormat: "html", supportedNotes:[]])
       break
     case "Document.getDocumentData":
-      return postJson(zoteroConnectorUrl + respondEndpoint, [dataString: documentData])
+      return postJson(zoteroConnectorUrl + respondEndpoint, [dataString: getDocumentProperty(STORAGE_KEY_DOCUMENT_DATA, node)])
       break
     case "Document.setDocumentData":
-      // TODO: Persist documentData
-      documentData = res.arguments[1]
+      node.mindMap.storage[STORAGE_KEY_DOCUMENT_DATA] = res.arguments[1]
       return postJson(zoteroConnectorUrl + respondEndpoint, null)
       break
     case "Document.cursorInField":
@@ -120,11 +117,30 @@ def parseCitationTextFromNode(Node node) {
   }
 }
 
+def propertiesToObj(properties) {
+  def result = [:]
+  properties.keySet().each {
+    result[it] = properties[it]
+  }
+  return result
+}
+
+def getDocumentProperty(key, node) {
+  // Storage values are otherwise retrieved as Convertibles. Practical as they are, they are unfortunately recursive.
+  return node.mindMap.storage[key]?.toString()
+}
+
 //TODO: try-catch, check if Zotero is running
-logger.info("Starting with document ID ${docIdStr}")
+if (!getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node)) {
+  UUID uu = UUID.randomUUID()
+  node.mindMap.storage[STORAGE_KEY_DOCUMENT_ID] = uu.toString()
+  node.mindMap.storage[STORAGE_KEY_DOCUMENT_DATA] = ""
+}
+logger.info("Starting with document ID ${getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node)}")
+logger.info("Document properties: ${propertiesToObj(node.mindMap.storage).toString()}")
 zoteroProcessing = true
 
-def request = [command:'addEditCitation', docId:docIdStr]
+def request = [command:'addEditCitation', docId:getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node)]
 def response = postJson(zoteroConnectorUrl + execCommandEndpoint, request)
 
 while (zoteroProcessing) {
