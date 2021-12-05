@@ -16,6 +16,7 @@ import groovy.transform.Field
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import org.freeplane.api.Node
+import java.util.concurrent.TimeUnit
 
 @Field String zoteroConnectorUrl = "http://127.0.0.1:23119/connector"
 @Field String execCommandEndpoint = "/document/execCommand"
@@ -27,7 +28,11 @@ import org.freeplane.api.Node
 @Field Boolean zoteroProcessing = false
 
 @Field MediaType JSON = MediaType.get("application/json; charset=utf-8");
-@Field OkHttpClient client = new OkHttpClient();
+// We need a reasonably long read timeout, since we need to keep the connection open
+// until the user chooses a citation:
+@Field OkHttpClient client = new OkHttpClient.Builder()
+      .readTimeout(1, TimeUnit.MINUTES)
+      .build();
 
 @Field JsonSlurper jsonSlurper = new JsonSlurper()
 
