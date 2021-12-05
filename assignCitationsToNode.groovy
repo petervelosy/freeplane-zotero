@@ -2,8 +2,8 @@
 
 // TODO: create two menu items (only the first ExecutionModes gets parsed)
 // TODO: Implement "Jump to reference" function
-// TODO: Check if Zotero is running
 // TODO: implement "Refresh all citations"
+// TODO: Handle this: INFO: Response: {"command":"Document.displayAlert","arguments":["371f5adf-8a4d-4429-9478-2f0ee62947a5","You have modified this citation since Zotero generated it. Editing will clear your modifications. Do you want to continue?\n\nOriginal: (Bóna et al., 1986; Szabó-Jilek & Dr Rózsa, 1977)\nModified: (Bóna et al., 1986; Szabó-Jilek &#38; Dr Rózsa, 1977)\n",1,1]}
 
 @Grab('com.squareup.okhttp3:okhttp:4.9.0')
 
@@ -17,6 +17,7 @@ import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import org.freeplane.api.Node
 import java.util.concurrent.TimeUnit
+import java.net.ConnectException
 
 @Field String zoteroConnectorUrl = "http://127.0.0.1:23119/connector"
 @Field String execCommandEndpoint = "/document/execCommand"
@@ -135,7 +136,6 @@ def getDocumentProperty(key, node) {
   return node.mindMap.storage[key]?.toString()
 }
 
-//TODO: try-catch, check if Zotero is running
 if (!getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node)) {
   UUID uu = UUID.randomUUID()
   node.mindMap.storage[STORAGE_KEY_DOCUMENT_ID] = uu.toString()
@@ -146,9 +146,12 @@ logger.info("Document properties: ${propertiesToObj(node.mindMap.storage).toStri
 zoteroProcessing = true
 
 def request = [command:'addEditCitation', docId:getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node)]
-def response = postJson(zoteroConnectorUrl + execCommandEndpoint, request)
-
-while (zoteroProcessing) {
-  response = executeZoteroCommandInResponse(response, client, node)
+try {
+  def response = postJson(zoteroConnectorUrl + execCommandEndpoint, request)
+  while (zoteroProcessing) {
+    response = executeZoteroCommandInResponse(response, client, node)
+  }
+  logger.info("Citation add/edit process finished.")
+} catch (ConnectException e) {
+  throw new Exception("Unable to connect to the Zotero HTTP API. Please ensure Zotero is running.", e)
 }
-logger.info("Citation add/edit process finished.")
