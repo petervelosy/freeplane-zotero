@@ -1,5 +1,4 @@
-// @ExecutionModes({on_single_node="/node_popup/Zotero/Insert Reference"})
-// @ExecutionModes({on_single_node="/main_menu/insert/links/Zotero[Insert Reference]"})
+// @ExecutionModes({on_single_node="/node_popup/Zotero"})
 
 // TODO: create two menu items (only the first ExecutionModes gets parsed)
 // TODO: Implement "Jump to reference" function
