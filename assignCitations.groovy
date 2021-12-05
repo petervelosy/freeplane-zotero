@@ -16,9 +16,6 @@ import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import org.freeplane.api.Node
 
-// TODO: switch to Freeplane's own logger
-@Field String logFileName = "freeplane_zotero.log"
-
 @Field String zoteroConnectorUrl = "http://127.0.0.1:23119/connector"
 @Field String execCommandEndpoint = "/document/execCommand"
 @Field String respondEndpoint = "/document/respond"
@@ -36,14 +33,8 @@ import org.freeplane.api.Node
 
 @Field JsonSlurper jsonSlurper = new JsonSlurper()
 
-void debug(String msg) {
-  File log = new File(logFileName)
-  log.withWriterAppend{ out ->
-      out.println msg
-  }
-}
-
 def postJson(url, groovyObj) {
+  logger.info("Request to URL ${url}: ${groovyObj.toString()}")
   String json = JsonOutput.toJson(groovyObj)
   RequestBody body = RequestBody.create(JSON, json)
   Request request = new Request.Builder()
@@ -51,7 +42,9 @@ def postJson(url, groovyObj) {
   	.post(body)
   	.build();
   Response response = client.newCall(request).execute()
-  return jsonSlurper.parseText(response.body().string());
+  String respStr = response.body().string()
+  logger.info("Response: ${respStr}")
+  return jsonSlurper.parseText(respStr);
 }
 
 def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
@@ -108,13 +101,13 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
         break
     default:
       // TODO parse showPopup command
-      throw new Exception("Unable to parse Zotero request ${res.command}. Please check ~/${logFileName} for details.")
+      throw new Exception("Unable to parse Zotero request ${res.command}. Please check Freeplane's log file for details.")
     break
   }
 }
 
 def parseCitationTextFromNode(Node node) {
-  debug "Parsing node text: ${node.text}"
+  logger.info("Parsing node text: ${node.text}")
   def matcher = node.text =~ /([^\[\]]+)(\s+\[(.*)\])/
   if (matcher.size() > 0 && matcher[0].size() >= 4) {
     return [title: matcher[0][1], citation: matcher[0][3]]
@@ -124,18 +117,13 @@ def parseCitationTextFromNode(Node node) {
 }
 
 //TODO: try-catch, check if Zotero is running
-debug "Starting with document ID ${docIdStr}"
+logger.info("Starting with document ID ${docIdStr}")
 zoteroProcessing = true
 
 def request = [command:'addEditCitation', docId:docIdStr]
-debug request.toString()
 def response = postJson(zoteroConnectorUrl + execCommandEndpoint, request)
-debug response.toString()
 
 while (zoteroProcessing) {
   response = executeZoteroCommandInResponse(response, client, node)
-  if (response) {
-    debug response.toString()
-  }
 }
-debug "Citation add/edit process finished."
+logger.info("Citation add/edit process finished.")
