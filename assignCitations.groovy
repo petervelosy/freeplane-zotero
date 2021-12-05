@@ -44,7 +44,11 @@ def postJson(url, groovyObj) {
   Response response = client.newCall(request).execute()
   String respStr = response.body().string()
   logger.info("Response: ${respStr}")
-  return jsonSlurper.parseText(respStr);
+  if (response.successful) {
+    return jsonSlurper.parseText(respStr);
+  } else {
+    throw new Exception(respStr)
+  }
 }
 
 def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
@@ -100,7 +104,7 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
         return postJson(zoteroConnectorUrl + respondEndpoint, null)
         break
     default:
-      // TODO parse showPopup command
+      // TODO parse the Document.displayAlert command
       throw new Exception("Unable to parse Zotero request ${res.command}. Please check Freeplane's log file for details.")
     break
   }
