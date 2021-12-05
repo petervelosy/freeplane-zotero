@@ -2,20 +2,24 @@
 
 // TODO: create two menu items (only the first ExecutionModes gets parsed)
 // TODO: Implement "Jump to reference" function
-// TODO: Check why utf-8 names are not retrieved correctly. Okhttp3?
+// TODO: Check if Zotero is running
 
-@Grab('com.github.groovy-wslite:groovy-wslite:1.1.2')
+@Grab('com.squareup.okhttp3:okhttp:4.9.0')
 
-import java.net.URL
-import wslite.rest.*
-import wslite.json.JSONObject
-import wslite.json.JSONArray
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import groovy.transform.Field
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
 import org.freeplane.api.Node
 
+// TODO: switch to Freeplane's own logger
 @Field String logFileName = "freeplane_zotero.log"
 
-@Field String zoteroConnectorUrl = "http://127.0.0.1:23119/connector/"
+@Field String zoteroConnectorUrl = "http://127.0.0.1:23119/connector"
 @Field String execCommandEndpoint = "/document/execCommand"
 @Field String respondEndpoint = "/document/respond"
 
@@ -27,101 +31,84 @@ import org.freeplane.api.Node
 
 @Field Boolean zoteroProcessing = false
 
-def debug(String msg) {
+@Field MediaType JSON = MediaType.get("application/json; charset=utf-8");
+@Field OkHttpClient client = new OkHttpClient();
+
+@Field JsonSlurper jsonSlurper = new JsonSlurper()
+
+void debug(String msg) {
   File log = new File(logFileName)
   log.withWriterAppend{ out ->
       out.println msg
   }
 }
 
-def respondZoteroRequest(JSONObject req, RESTClient client, Node node) {
-  switch(req.command) {
+def postJson(url, groovyObj) {
+  String json = JsonOutput.toJson(groovyObj)
+  RequestBody body = RequestBody.create(JSON, json)
+  Request request = new Request.Builder()
+    .url(url)
+  	.post(body)
+  	.build();
+  Response response = client.newCall(request).execute()
+  return jsonSlurper.parseText(response.body().string());
+}
+
+def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
+  switch(res.command) {
     case "Application.getActiveDocument":
-      return client.post(path:respondEndpoint) {
-        json documentID:docIdStr, outputFormat: "html", supportedNotes:["footnotes"]
-      }
+      return postJson(zoteroConnectorUrl + respondEndpoint, [documentID:docIdStr, outputFormat: "html", supportedNotes:[]])
       break
     case "Document.getDocumentData":
-      return client.post(path:respondEndpoint) {
-        json dataString: documentData
-      }
+      return postJson(zoteroConnectorUrl + respondEndpoint, [dataString: documentData])
       break
     case "Document.setDocumentData":
       // TODO: Persist documentData
-      documentData = req.arguments[1]
-      return client.post(path:respondEndpoint) {
-        type ContentType.JSON
-        text "null"
-      }
+      documentData = res.arguments[1]
+      return postJson(zoteroConnectorUrl + respondEndpoint, null)
       break
     case "Document.cursorInField":
       if (node["citations"]) {
-        return client.post(path:respondEndpoint) {
-          json text: parseCitationTextFromNode(node).citation, code: node["citations"].toString(), id: node.id, noteIndex: 0 //node["citations"] is a Convertible, not a String
-        }
+        //node["citations"] is a Convertible, not a String:
+        return postJson(zoteroConnectorUrl + respondEndpoint, [text: parseCitationTextFromNode(node).citation, code: node["citations"].toString(), id: node.id, noteIndex: 0])
       } else {
-        return client.post(path:respondEndpoint) {
-          type ContentType.JSON
-          text "null"
-        }
+        return postJson(zoteroConnectorUrl + respondEndpoint, null)
       }
       break
     case "Document.canInsertField":
-      return client.post(path:respondEndpoint) {
-        type ContentType.JSON
-        text "true"
-      }
+      return postJson(zoteroConnectorUrl + respondEndpoint, true)
       break
     case "Document.insertField":
       node["citations"] = "{}"
       node.minimized = true
-      return client.post(path:respondEndpoint) {
-        json text: "", code: node["citations"].toString(), id: node.id, noteIndex: 0
-      }
+      return postJson(zoteroConnectorUrl + respondEndpoint, [text: "", code: node["citations"].toString(), id: node.id, noteIndex: 0])
       break
     case "Document.getFields":
-      def jArr = new JSONArray()
-      jArr[0] = new JSONObject()
-      jArr[0].text = parseCitationTextFromNode(node).citation
-      jArr[0].code = node["citations"].toString()
-      jArr[0].id = node.id
-      jArr[0].noteIndex = 0
-      return client.post(path:respondEndpoint) {
-        json jArr
-      }
+      return postJson(zoteroConnectorUrl + respondEndpoint, [[text: parseCitationTextFromNode(node).citation, code: node["citations"].toString(), id: node.id, noteIndex: 0]])
       break
-    case "Field.setCode":
-      fieldCode = req.arguments[2]
-      node.putAt("citations", fieldCode)
-      return client.post(path:respondEndpoint) {
-        type ContentType.JSON
-        text "null"
-      }
-      break
-    case "Field.setText":
-        // TODO: Parse rich text
-        boolean richText = req.arguments[3]
-        String newCitationText = req.arguments[2]
-        // TODO: handle pattern
-        def nodeTextParts = parseCitationTextFromNode(node)
-        node.text = "${nodeTextParts.title} [${newCitationText}]"
-        return client.post(path:respondEndpoint) {
-          type ContentType.JSON
-          text "null"
-        }
-        break
     case "Document.activate":
-      return client.post(path:respondEndpoint) {
-        type ContentType.JSON
-        text "null"
-      }
+      return postJson(zoteroConnectorUrl + respondEndpoint, null)
       break
     case "Document.complete":
       zoteroProcessing = false
       break
+    case "Field.setCode":
+      def fieldCode = res.arguments[2]
+      node.putAt("citations", fieldCode)
+      return postJson(zoteroConnectorUrl + respondEndpoint, null)
+      break
+    case "Field.setText":
+        // TODO: Parse rich text
+        boolean richText = res.arguments[3]
+        String newCitationText = res.arguments[2]
+        def nodeTextParts = parseCitationTextFromNode(node)
+        // TODO: handle citation removal
+        node.text = "${nodeTextParts.title} [${newCitationText}]"
+        return postJson(zoteroConnectorUrl + respondEndpoint, null)
+        break
     default:
       // TODO parse showPopup command
-      throw new Exception("Unable to parse Zotero request ${req.command}. Please check ~/${logFileName} for details.")
+      throw new Exception("Unable to parse Zotero request ${res.command}. Please check ~/${logFileName} for details.")
     break
   }
 }
@@ -136,20 +123,19 @@ def parseCitationTextFromNode(Node node) {
   }
 }
 
-RESTClient client = new RESTClient(zoteroConnectorUrl)
-client.defaultCharset = "UTF-8"
-
 //TODO: try-catch, check if Zotero is running
 debug "Starting with document ID ${docIdStr}"
 zoteroProcessing = true
-def response = client.post(path:execCommandEndpoint, {
-  json command:'addEditCitation', docId:docIdStr
-})
-debug response.json.toString()
+
+def request = [command:'addEditCitation', docId:docIdStr]
+debug request.toString()
+def response = postJson(zoteroConnectorUrl + execCommandEndpoint, request)
+debug response.toString()
+
 while (zoteroProcessing) {
-  response = respondZoteroRequest(response.json, client, node)
+  response = executeZoteroCommandInResponse(response, client, node)
   if (response) {
-    debug response.json.toString()
+    debug response.toString()
   }
 }
 debug "Citation add/edit process finished."
