@@ -3,6 +3,7 @@
 
 // TODO: create two menu items (only the first ExecutionModes gets parsed)
 // TODO: Implement "Jump to reference" function
+// TODO: Check why utf-8 names are not retrieved correctly. Okhttp3?
 
 @Grab('com.github.groovy-wslite:groovy-wslite:1.1.2')
 
@@ -24,10 +25,6 @@ import org.freeplane.api.Node
 @Field String docIdStr = docId.toString()
 
 @Field String documentData = ""
-
-@Field String fieldId
-@Field String fieldCode
-@Field String fieldText
 
 @Field Boolean zoteroProcessing = false
 
@@ -59,19 +56,15 @@ def respondZoteroRequest(JSONObject req, RESTClient client, Node node) {
       }
       break
     case "Document.cursorInField":
-      /*
-      def citations = node["citations"] ? node["citations"].toString() : "" //node attributes are not Strings but Convertible objects
-      def jArr = new JSONArray()
-      jArr[0] = node.id
-      jArr[1] = citations
-      jArr[2] = 0
-      return client.post(path:respondEndpoint) {
-        json jArr
-      }
-      */
-      return client.post(path:respondEndpoint) {
-        type ContentType.JSON
-        text "null"
+      if (node["citations"]) {
+        return client.post(path:respondEndpoint) {
+          json text: parseCitationTextFromNode(node).citation, code: node["citations"].toString(), id: node.id, noteIndex: 0 //node["citations"] is a Convertible, not a String
+        }
+      } else {
+        return client.post(path:respondEndpoint) {
+          type ContentType.JSON
+          text "null"
+        }
       }
       break
     case "Document.canInsertField":
@@ -81,26 +74,18 @@ def respondZoteroRequest(JSONObject req, RESTClient client, Node node) {
       }
       break
     case "Document.insertField":
-      fieldId = node.id
-      fieldCode = "{}"
-      fieldText = ""
-      /*
-      def jArr = new JSONArray()
-      jArr[0] = fieldId
-      jArr[1] = ""
-      jArr[2] = 0
-      */
-      // {\"text\":\"{Updating}\",\"code\":\"{}\",\"id\":\"RVOP5v\",\"noteIndex\":0}
+      node["citations"] = "{}"
+      node.minimized = true
       return client.post(path:respondEndpoint) {
-        json text: fieldText, code: fieldCode, id: fieldId, noteIndex: 0
+        json text: "", code: node["citations"].toString(), id: node.id, noteIndex: 0
       }
       break
     case "Document.getFields":
       def jArr = new JSONArray()
       jArr[0] = new JSONObject()
-      jArr[0].text = fieldText
-      jArr[0].code = fieldCode
-      jArr[0].id = fieldId
+      jArr[0].text = parseCitationTextFromNode(node).citation
+      jArr[0].code = node["citations"].toString()
+      jArr[0].id = node.id
       jArr[0].noteIndex = 0
       return client.post(path:respondEndpoint) {
         json jArr
@@ -117,9 +102,10 @@ def respondZoteroRequest(JSONObject req, RESTClient client, Node node) {
     case "Field.setText":
         // TODO: Parse rich text
         boolean richText = req.arguments[3]
-        fieldText = req.arguments[2]
+        String newCitationText = req.arguments[2]
         // TODO: handle pattern
-        node.text += " " + fieldText
+        def nodeTextParts = parseCitationTextFromNode(node)
+        node.text = "${nodeTextParts.title} [${newCitationText}]"
         return client.post(path:respondEndpoint) {
           type ContentType.JSON
           text "null"
@@ -141,7 +127,18 @@ def respondZoteroRequest(JSONObject req, RESTClient client, Node node) {
   }
 }
 
+def parseCitationTextFromNode(Node node) {
+  debug "Parsing node text: ${node.text}"
+  def matcher = node.text =~ /([^\[\]]+)(\s+\[(.*)\])/
+  if (matcher.size() > 0 && matcher[0].size() >= 4) {
+    return [title: matcher[0][1], citation: matcher[0][3]]
+  } else {
+    return [title: node.text, citation: ""]
+  }
+}
+
 RESTClient client = new RESTClient(zoteroConnectorUrl)
+client.defaultCharset = "UTF-8"
 
 //TODO: try-catch, check if Zotero is running
 debug "Starting with document ID ${docIdStr}"
