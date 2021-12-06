@@ -8,6 +8,7 @@
 // TODO: integrate the Freeplane Gradle plugin
 // TODO: Ability to transform links from online to offline
 // TODO: Only add a link automatically if no link exists or the link is a Zotero link
+// TODO: Set 'Show selected attributes only' as a default and hide zotero_ node attributes
 
 @Grab('com.squareup.okhttp3:okhttp:4.9.0')
 @Grab('org.apache.commons:commons-lang3:3.12.0')
@@ -32,6 +33,8 @@ import org.apache.commons.lang.StringEscapeUtils
 
 @Field final STORAGE_KEY_DOCUMENT_ID = "zotero_document_id"
 @Field final STORAGE_KEY_DOCUMENT_DATA = "zotero_document_data"
+
+@Field final NODE_ATTRIBUTE_CITATIONS = "zotero_citations"
 
 @Field final FIELD_CODE_PREFIX_CSL = "ITEM CSL_CITATION "
 
@@ -77,9 +80,9 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
       return postJson(zoteroConnectorUrl + respondEndpoint, null)
       break
     case "Document.cursorInField":
-      if (node["citations"]) {
-        //node["citations"] is a Convertible, not a String:
-        return postJson(zoteroConnectorUrl + respondEndpoint, [text: parseCitationTextFromNode(node).citation, code: node["citations"].toString(), id: node.id, noteIndex: 0])
+      if (node[NODE_ATTRIBUTE_CITATIONS]) {
+        //node[NODE_ATTRIBUTE_CITATIONS] is a Convertible, not a String:
+        return postJson(zoteroConnectorUrl + respondEndpoint, [text: parseCitationTextFromNode(node).citation, code: node[NODE_ATTRIBUTE_CITATIONS].toString(), id: node.id, noteIndex: 0])
       } else {
         return postJson(zoteroConnectorUrl + respondEndpoint, null)
       }
@@ -88,12 +91,12 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
       return postJson(zoteroConnectorUrl + respondEndpoint, true)
       break
     case "Document.insertField":
-      node["citations"] = "{}"
+      node[NODE_ATTRIBUTE_CITATIONS] = "{}"
       node.minimized = true
-      return postJson(zoteroConnectorUrl + respondEndpoint, [text: "", code: node["citations"].toString(), id: node.id, noteIndex: 0])
+      return postJson(zoteroConnectorUrl + respondEndpoint, [text: "", code: node[NODE_ATTRIBUTE_CITATIONS].toString(), id: node.id, noteIndex: 0])
       break
     case "Document.getFields":
-      return postJson(zoteroConnectorUrl + respondEndpoint, [[text: parseCitationTextFromNode(node).citation, code: node["citations"].toString(), id: node.id, noteIndex: 0]])
+      return postJson(zoteroConnectorUrl + respondEndpoint, [[text: parseCitationTextFromNode(node).citation, code: node[NODE_ATTRIBUTE_CITATIONS].toString(), id: node.id, noteIndex: 0]])
       break
     case "Document.activate":
       return postJson(zoteroConnectorUrl + respondEndpoint, null)
@@ -103,7 +106,7 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
       break
     case "Field.setCode":
       def fieldCode = res.arguments[2]
-      node.putAt("citations", fieldCode)
+      node.putAt(NODE_ATTRIBUTE_CITATIONS, fieldCode)
       if (fieldCode.startsWith(FIELD_CODE_PREFIX_CSL)) {
         def csl = parseCslFieldCode(fieldCode)
         def itemIds = extractItemIdsFromCsl(csl)
