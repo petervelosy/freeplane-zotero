@@ -5,6 +5,9 @@
 // TODO: implement "Refresh all citations"
 // TODO: Handle this: INFO: Response: {"command":"Document.displayAlert","arguments":["371f5adf-8a4d-4429-9478-2f0ee62947a5","You have modified this citation since Zotero generated it. Editing will clear your modifications. Do you want to continue?\n\nOriginal: (Bóna et al., 1986; Szabó-Jilek & Dr Rózsa, 1977)\nModified: (Bóna et al., 1986; Szabó-Jilek &#38; Dr Rózsa, 1977)\n",1,1]}
 // TODO: Field.delete
+// TODO: integrate the Freeplane Gradle plugin
+// TODO: Ability to transform links from online to offline
+// TODO: Only add a link automatically if no link exists or the link is a Zotero link
 
 @Grab('com.squareup.okhttp3:okhttp:4.9.0')
 @Grab('org.apache.commons:commons-lang3:3.12.0')
@@ -20,6 +23,7 @@ import groovy.json.JsonOutput
 import org.freeplane.api.Node
 import java.util.concurrent.TimeUnit
 import java.net.ConnectException
+import java.net.URI
 import org.apache.commons.lang.StringEscapeUtils
 
 @Field String zoteroConnectorUrl = "http://127.0.0.1:23119/connector"
@@ -28,6 +32,8 @@ import org.apache.commons.lang.StringEscapeUtils
 
 @Field final STORAGE_KEY_DOCUMENT_ID = "zotero_document_id"
 @Field final STORAGE_KEY_DOCUMENT_DATA = "zotero_document_data"
+
+@Field final FIELD_CODE_PREFIX_CSL = "ITEM CSL_CITATION "
 
 @Field Boolean zoteroProcessing = false
 
@@ -98,6 +104,12 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
     case "Field.setCode":
       def fieldCode = res.arguments[2]
       node.putAt("citations", fieldCode)
+      if (fieldCode.startsWith(FIELD_CODE_PREFIX_CSL)) {
+        def csl = parseCslFieldCode(fieldCode)
+        def itemIds = extractItemIdsFromCsl(csl)
+        def link = generateLocalZoteroLinkFromItemIds(itemIds)
+        node.link.setUri(new URI(link))
+      }
       return postJson(zoteroConnectorUrl + respondEndpoint, null)
       break
     case "Field.setText":
@@ -127,6 +139,20 @@ def parseCitationTextFromNode(Node node) {
   } else {
     return [title: node.text, citation: ""]
   }
+}
+
+def parseCslFieldCode(String fieldCode) {
+  String jsonPartStr = fieldCode.substring(FIELD_CODE_PREFIX_CSL.length())
+  return jsonSlurper.parseText(jsonPartStr)
+}
+
+def extractItemIdsFromCsl(csl) {
+  // TODO: check if an URI is present even if the Zotero library is not synced with a cloud account
+  csl.citationItems.collect { it.uris[0].split("/").last() }
+}
+
+def generateLocalZoteroLinkFromItemIds(itemIds) {
+  "zotero://select/library/items?itemKey=${itemIds.join(',')}"
 }
 
 def propertiesToObj(properties) {
