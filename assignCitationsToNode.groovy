@@ -4,8 +4,10 @@
 // TODO: Implement "Jump to reference" function
 // TODO: implement "Refresh all citations"
 // TODO: Handle this: INFO: Response: {"command":"Document.displayAlert","arguments":["371f5adf-8a4d-4429-9478-2f0ee62947a5","You have modified this citation since Zotero generated it. Editing will clear your modifications. Do you want to continue?\n\nOriginal: (Bóna et al., 1986; Szabó-Jilek & Dr Rózsa, 1977)\nModified: (Bóna et al., 1986; Szabó-Jilek &#38; Dr Rózsa, 1977)\n",1,1]}
+// TODO: Field.delete
 
 @Grab('com.squareup.okhttp3:okhttp:4.9.0')
+@Grab('org.apache.commons:commons-lang3:3.12.0')
 
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -18,6 +20,7 @@ import groovy.json.JsonOutput
 import org.freeplane.api.Node
 import java.util.concurrent.TimeUnit
 import java.net.ConnectException
+import org.apache.commons.lang.StringEscapeUtils
 
 @Field String zoteroConnectorUrl = "http://127.0.0.1:23119/connector"
 @Field String execCommandEndpoint = "/document/execCommand"
@@ -101,6 +104,9 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
         // TODO: Parse rich text
         boolean richText = res.arguments[3]
         String newCitationText = res.arguments[2]
+        if (richText) {
+          newCitationText = StringEscapeUtils.unescapeHtml(newCitationText)
+        }
         def nodeTextParts = parseCitationTextFromNode(node)
         // TODO: handle citation removal
         node.text = "${nodeTextParts.title} [${newCitationText}]"
