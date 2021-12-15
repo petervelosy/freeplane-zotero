@@ -9,6 +9,10 @@
 // TODO: Ability to transform links from online to offline
 // TODO: Only add a link automatically if no link exists or the link is a Zotero link
 // TODO: Set 'Show selected attributes only' as a default and hide zotero_ node attributes
+// TODO: Handle access control errors -> notify the user to set script permissions in Freeplane
+// TODO: Another integration scenario: create a semantic network (with labellable/classifiable connectors/edges) between many papers (extract references using e.g. https://github.com/CeON/CERMINE)
+// TODO: hierarchical node numbering?
+// TODO: copy citations from parent
 
 @Grab('com.squareup.okhttp3:okhttp:4.9.0')
 @Grab('org.apache.commons:commons-lang3:3.12.0')
@@ -26,6 +30,7 @@ import java.util.concurrent.TimeUnit
 import java.net.ConnectException
 import java.net.URI
 import org.apache.commons.lang.StringEscapeUtils
+import javax.swing.JOptionPane
 
 @Field String zoteroConnectorUrl = "http://127.0.0.1:23119/connector"
 @Field String execCommandEndpoint = "/document/execCommand"
@@ -37,6 +42,15 @@ import org.apache.commons.lang.StringEscapeUtils
 @Field final NODE_ATTRIBUTE_CITATIONS = "zotero_citations"
 
 @Field final FIELD_CODE_PREFIX_CSL = "ITEM CSL_CITATION "
+
+@Field final ZOTERO_DIALOG_ICON_STOP = 0
+@Field final ZOTERO_DIALOG_ICON_NOTICE = 1
+@Field final ZOTERO_DIALOG_ICON_CAUTION = 2
+
+@Field final ZOTERO_DIALOG_BUTTONS_OK = 0
+@Field final ZOTERO_DIALOG_BUTTONS_OK_CANCEL = 1
+@Field final ZOTERO_DIALOG_BUTTONS_YES_NO = 2
+@Field final ZOTERO_DIALOG_BUTTONS_YES_NO_CANCEL = 3
 
 @Field Boolean zoteroProcessing = false
 
@@ -71,14 +85,11 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
   switch(res.command) {
     case "Application.getActiveDocument":
       return postJson(zoteroConnectorUrl + respondEndpoint, [documentID:getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node), outputFormat: "html", supportedNotes:[]])
-      break
     case "Document.getDocumentData":
       return postJson(zoteroConnectorUrl + respondEndpoint, [dataString: getDocumentProperty(STORAGE_KEY_DOCUMENT_DATA, node)])
-      break
     case "Document.setDocumentData":
       node.mindMap.storage[STORAGE_KEY_DOCUMENT_DATA] = res.arguments[1]
       return postJson(zoteroConnectorUrl + respondEndpoint, null)
-      break
     case "Document.cursorInField":
       if (node[NODE_ATTRIBUTE_CITATIONS]) {
         //node[NODE_ATTRIBUTE_CITATIONS] is a Convertible, not a String:
@@ -86,24 +97,63 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
       } else {
         return postJson(zoteroConnectorUrl + respondEndpoint, null)
       }
-      break
     case "Document.canInsertField":
       return postJson(zoteroConnectorUrl + respondEndpoint, true)
-      break
     case "Document.insertField":
       node[NODE_ATTRIBUTE_CITATIONS] = "{}"
-      node.minimized = true
       return postJson(zoteroConnectorUrl + respondEndpoint, [text: "", code: node[NODE_ATTRIBUTE_CITATIONS].toString(), id: node.id, noteIndex: 0])
-      break
     case "Document.getFields":
       return postJson(zoteroConnectorUrl + respondEndpoint, [[text: parseCitationTextFromNode(node).citation, code: node[NODE_ATTRIBUTE_CITATIONS].toString(), id: node.id, noteIndex: 0]])
+    case "Document.displayAlert":
+      def message = res.arguments[1]
+      def icon = res.arguments[2]
+      def buttons = res.arguments[3]
+      def javaIconId = zoteroToJavaIconId(icon)
+      switch(buttons) {
+        case ZOTERO_DIALOG_BUTTONS_OK_CANCEL:
+          def result = ui.showConfirmDialog(null, message, "", JOptionPane.OK_CANCEL_OPTION, javaIconId)
+          switch (result) {
+            case JOptionPane.OK_OPTION:
+              return postJson(zoteroConnectorUrl + respondEndpoint, 1)
+            case JOptionPane.CANCEL_OPTION:
+              return postJson(zoteroConnectorUrl + respondEndpoint, 0)
+          }
+          break
+        case ZOTERO_DIALOG_BUTTONS_YES_NO:
+          def result = ui.showConfirmDialog(null, message, JOptionPane.YES_NO_OPTION, javaIconId)
+          switch (result) {
+            case JOptionPane.YES_OPTION:
+              return postJson(zoteroConnectorUrl + respondEndpoint, 1)
+            case JOptionPane.NO_OPTION:
+              return postJson(zoteroConnectorUrl + respondEndpoint, 0)
+          }
+          break
+        case ZOTERO_DIALOG_BUTTONS_YES_NO_CANCEL:
+          def result = ui.showConfirmDialog(null, message, JOptionPane.YES_NO_CANCEL_OPTION, javaIconId)
+          switch (result) {
+            case JOptionPane.YES_OPTION:
+              return postJson(zoteroConnectorUrl + respondEndpoint, 2)
+            case JOptionPane.NO_OPTION:
+              return postJson(zoteroConnectorUrl + respondEndpoint, 1)
+            case JOptionPane.CANCEL_OPTION:
+              return postJson(zoteroConnectorUrl + respondEndpoint, 0)
+          }
+          break
+        case ZOTERO_DIALOG_BUTTONS_OK:
+          ui.informationMessage(message, "", javaIconId)
+          return postJson(zoteroConnectorUrl + respondEndpoint, 1)
+      }
       break
     case "Document.activate":
       return postJson(zoteroConnectorUrl + respondEndpoint, null)
-      break
     case "Document.complete":
       zoteroProcessing = false
       break
+    // FIXME: Field.delete and Field.setCode currently only work on the current node
+    case "Field.delete":
+      def fieldCode = res.arguments[2]
+      node.putAt(NODE_ATTRIBUTE_CITATIONS, null)
+      return postJson(zoteroConnectorUrl + respondEndpoint, null)
     case "Field.setCode":
       def fieldCode = res.arguments[2]
       node.putAt(NODE_ATTRIBUTE_CITATIONS, fieldCode)
@@ -114,7 +164,6 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
         node.link.setUri(new URI(link))
       }
       return postJson(zoteroConnectorUrl + respondEndpoint, null)
-      break
     case "Field.setText":
         // TODO: Parse rich text
         boolean richText = res.arguments[3]
@@ -123,14 +172,22 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
           newCitationText = StringEscapeUtils.unescapeHtml(newCitationText)
         }
         def nodeTextParts = parseCitationTextFromNode(node)
-        // TODO: handle citation removal
         node.text = "${nodeTextParts.title} [${newCitationText}]"
         return postJson(zoteroConnectorUrl + respondEndpoint, null)
-        break
     default:
-      // TODO parse the Document.displayAlert command
       throw new Exception("Unable to parse Zotero request ${res.command}. Please check Freeplane's log file for details.")
     break
+  }
+}
+
+def zoteroToJavaIconId(iconId) {
+  switch(iconId) {
+    case ZOTERO_DIALOG_ICON_STOP:
+      return JOptionPane.ERROR_MESSAGE
+    case ZOTERO_DIALOG_ICON_CAUTION:
+      return JOptionPane.WARNING_MESSAGE
+    case ZOTERO_DIALOG_ICON_NOTICE:
+      return JOptionPane.INFORMATION_MESSAGE
   }
 }
 
@@ -175,6 +232,7 @@ if (!getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node)) {
   UUID uu = UUID.randomUUID()
   node.mindMap.storage[STORAGE_KEY_DOCUMENT_ID] = uu.toString()
   node.mindMap.storage[STORAGE_KEY_DOCUMENT_DATA] = ""
+  menuUtils.executeMenuItems(['ShowSelectedAttributesAction'])
 }
 logger.info("Starting with document ID ${getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node)}")
 logger.info("Document properties: ${propertiesToObj(node.mindMap.storage).toString()}")

@@ -1,6 +1,10 @@
 // @ExecutionModes({on_single_node="/node_popup/Zotero"})
 
 import org.freeplane.api.Node
+import groovy.transform.Field
+
+// TODO: extract to a global constants class
+@Field final NODE_ATTRIBUTE_CITATIONS = "zotero_citations"
 
 // TODO: extract to a utility class
 def parseCitationTextFromNode(Node node) {
@@ -13,5 +17,6 @@ def parseCitationTextFromNode(Node node) {
   }
 }
 
-node["citations"] = null
+node[NODE_ATTRIBUTE_CITATIONS] = null
+node.link = null // TODO: Only remove if it is a Zotero link
 node.text = parseCitationTextFromNode(node).title
