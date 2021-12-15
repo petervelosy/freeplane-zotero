@@ -1,4 +1,4 @@
-// @ExecutionModes({on_selected_node="/node_popup/Zotero"})
+// @ExecutionModes({on_single_node="//main_menu/extras/Zotero"})
 
 import groovy.transform.SourceURI
 import java.nio.file.Path
@@ -14,6 +14,4 @@ def zotero = shell.parse(scriptLocation.resolveSibling('zotero.groovy').toFile()
 zotero.logger = logger
 zotero.ui = ui
 
-node[zotero.NODE_ATTRIBUTE_CITATIONS] = null
-node.link.remove() // TODO: Only remove if it is a Zotero link
-node.text = zotero.parseCitationTextFromNode(node).title
+zotero.executeApiCommand('refresh', node)
