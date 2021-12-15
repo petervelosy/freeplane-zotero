@@ -1,10 +1,7 @@
-// @ExecutionModes({on_single_node="/node_popup/Zotero"})
+// @ExecutionModes({on_selected_node="/node_popup/Zotero"})
 
 // TODO: create two menu items (only the first ExecutionModes gets parsed)
-// TODO: Implement "Jump to reference" function
 // TODO: implement "Refresh all citations"
-// TODO: Handle this: INFO: Response: {"command":"Document.displayAlert","arguments":["371f5adf-8a4d-4429-9478-2f0ee62947a5","You have modified this citation since Zotero generated it. Editing will clear your modifications. Do you want to continue?\n\nOriginal: (Bóna et al., 1986; Szabó-Jilek & Dr Rózsa, 1977)\nModified: (Bóna et al., 1986; Szabó-Jilek &#38; Dr Rózsa, 1977)\n",1,1]}
-// TODO: Field.delete
 // TODO: integrate the Freeplane Gradle plugin
 // TODO: Ability to transform links from online to offline
 // TODO: Only add a link automatically if no link exists or the link is a Zotero link
@@ -149,10 +146,17 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
     case "Document.complete":
       zoteroProcessing = false
       break
-    // FIXME: Field.delete and Field.setCode currently only work on the current node
+    // FIXME: Field methods currently only work on the current node
+    case "Field.select":
+      def fieldId = res.arguments[1]
+      return postJson(zoteroConnectorUrl + respondEndpoint, null)
     case "Field.delete":
-      def fieldCode = res.arguments[2]
+      def fieldId = res.arguments[1]
       node.putAt(NODE_ATTRIBUTE_CITATIONS, null)
+      return postJson(zoteroConnectorUrl + respondEndpoint, null)
+    case "Field.removeCode":
+      def fieldId = res.arguments[1]
+      node.putAt(NODE_ATTRIBUTE_CITATIONS, "")
       return postJson(zoteroConnectorUrl + respondEndpoint, null)
     case "Field.setCode":
       def fieldCode = res.arguments[2]
@@ -164,6 +168,9 @@ def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
         node.link.setUri(new URI(link))
       }
       return postJson(zoteroConnectorUrl + respondEndpoint, null)
+    case "Field.getText":
+      def fieldId = res.arguments[1]
+      return postJson(zoteroConnectorUrl + respondEndpoint, parseCitationTextFromNode(node).citation)
     case "Field.setText":
         // TODO: Parse rich text
         boolean richText = res.arguments[3]

@@ -1,4 +1,4 @@
-// @ExecutionModes({on_single_node="/node_popup/Zotero"})
+// @ExecutionModes({on_selected_node="/node_popup/Zotero"})
 
 import org.freeplane.api.Node
 import groovy.transform.Field
