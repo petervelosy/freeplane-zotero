@@ -26,7 +26,8 @@ NOTE: Due to a bug, the packageAddon task may not complete successfully, quittin
 
 ## How to install
 
-- After building, double click `freeplane-zotero/build/addon/freeplane-zotero-[version].addon.mm` to install the plugin (Alternatively, open Tools/Addons in Freeplane and browse for this file, then click Install)
+- Install Freeplane and Zotero if not installed yet
+- Build or [download](https://www.petervelosy.com/freeplane-zotero-current.mm) the addon. Double click the .mm file to install it. (Alternatively, open Tools/Addons in Freeplane and browse for this file, then click Install)
 
 ## Important Notice
 
