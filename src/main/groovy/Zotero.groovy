@@ -1,8 +1,5 @@
 package com.petervelosy.freeplanezotero
 
-@Grab('org.apache.commons:commons-text:1.9')
-@Grab('com.squareup.okhttp3:okhttp:4.9.0')
-
 import static Constants.*
 import okhttp3.OkHttpClient
 import okhttp3.Request

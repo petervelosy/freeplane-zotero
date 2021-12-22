@@ -108,8 +108,7 @@
       </li>
     </ul>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <node TEXT="description" POSITION="left" ID="ID_724243728" CREATED="1639818486061" MODIFIED="1639888032500">
 <edge COLOR="#ff0000"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
@@ -128,8 +127,7 @@
       To translate the description you have to define a translation for the key 'addons.${name}.description'.
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <node TEXT="A Freeplane addon which makes it possible to assign citations from Zotero (an excellent open source reference manager) to any node on a Freeplane mind map." ID="ID_408830492" CREATED="1639885419520" MODIFIED="1639885435812"/>
 </node>
 <node TEXT="changes" POSITION="left" ID="ID_623818723" CREATED="1639818486070" MODIFIED="1639888032502">
@@ -144,8 +142,7 @@
       Change log of this add-on: append one node for each noteworthy version and put the details for each version into a child node.
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 </node>
 <node TEXT="license" POSITION="left" ID="ID_1385975438" CREATED="1639818486074" MODIFIED="1639888032505">
 <edge COLOR="#00ff00"/>
@@ -165,10 +162,8 @@
       The License text has to be entered as a child of the <i>'license'</i>&nbsp;node, either as plain text or as HTML.
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <node TEXT="This add-on is free software: you can redistribute it and/or modify&#xa;it under the terms of the GNU General Public License as published by&#xa;the Free Software Foundation, either version 3 of the License, or&#xa;(at your option) any later version.&#xa;&#xa;This program is distributed in the hope that it will be useful,&#xa;but WITHOUT ANY WARRANTY; without even the implied warranty of&#xa;MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the&#xa;GNU General Public License for more details." ID="ID_563970406" CREATED="1639818486078" MODIFIED="1639888011580"/>
-<node TEXT="" ID="ID_37840272" CREATED="1639887989520" MODIFIED="1639887989520"/>
 </node>
 <node TEXT="preferences.xml" POSITION="left" ID="ID_856741949" CREATED="1639818486095" MODIFIED="1639888032508">
 <edge COLOR="#ff00ff"/>
@@ -185,8 +180,7 @@
       <font color="#000000" face="SansSerif, sans-serif">Every property in the configuration should receive a default value in <i>default.properties</i>&nbsp;node.</font>
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 </node>
 <node TEXT="default.properties" POSITION="left" ID="ID_998145115" CREATED="1639818486101" MODIFIED="1639888032511">
 <edge COLOR="#00ffff"/>
@@ -208,8 +202,7 @@
       </li>
     </ul>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 </node>
 <node TEXT="translations" POSITION="left" ID="ID_491960841" CREATED="1639818486106" MODIFIED="1639888032515">
 <edge COLOR="#7c0000"/>
@@ -234,8 +227,7 @@
       </li>
     </ul>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <node TEXT="en" ID="ID_702828840" CREATED="1639818486111" MODIFIED="1639887905991">
 <attribute NAME="addons.${name}" VALUE="Zotero"/>
 <attribute NAME="addons.${name}.assignCitationsToNode" VALUE="Assign citation(s) to node"/>
@@ -255,8 +247,7 @@
       List of files and/or directories to remove on uninstall
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <attribute NAME="delete" VALUE="${installationbase}/addons/${name}.script.xml"/>
 <attribute NAME="delete" VALUE="${installationbase}/addons/${name}/scripts/assignCitationsToNode.groovy"/>
 <attribute NAME="delete" VALUE="${installationbase}/addons/${name}/scripts/removeCitationsFromNode.groovy"/>
@@ -381,8 +372,7 @@
       &nbsp;&nbsp;- In any case set execute_scripts_without_asking to true unless you want to annoy users.
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <node TEXT="assignCitationsToNode.groovy" ID="ID_973984895" CREATED="1639885487103" MODIFIED="1639887373312">
 <attribute NAME="menuTitleKey" VALUE="addons.${name}.assignCitationsToNode"/>
 <attribute NAME="menuLocation" VALUE="/node_popup/addons.${name}"/>
@@ -453,8 +443,7 @@
       &nbsp;- The files will be processed in the sequence as seen in the map.
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 <node TEXT="freeplane-zotero.jar" ID="ID_1554347699" CREATED="1639886550289" MODIFIED="1639886558748"/>
 </node>
 <node TEXT="zips" POSITION="right" ID="ID_1000380732" CREATED="1639818486208" MODIFIED="1639888032593">
@@ -493,8 +482,7 @@
       &nbsp;- The files will be processed in the sequence as seen in the map.
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 </node>
 <node TEXT="images" POSITION="right" ID="ID_104960538" CREATED="1639818486227" MODIFIED="1639888032596">
 <edge COLOR="#7c7c00"/>
@@ -528,8 +516,7 @@
       Images can be added automatically by releaseAddOn.groovy or must be uploaded into the map via the script <i>Tools-&gt;Scripts-&gt;Insert Binary</i>&nbsp;since they have to be (base64) encoded as simple strings.
     </p>
   </body>
-</html>
-</richcontent>
+</html></richcontent>
 </node>
 </node>
 </map>
