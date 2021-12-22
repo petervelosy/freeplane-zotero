@@ -1,61 +1,82 @@
 buildscript {
-	repositories {
-		mavenCentral()
-	}
-	dependencies {
-		classpath 'org.freeplane:gradle-freeplane-plugin:0.5'
-	}
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.freeplane:gradle-freeplane-plugin:0.5'
+    }
+}
+
+plugins {
+    id "com.diffplug.spotless" version "6.0.5"
 }
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 apply plugin: 'org.freeplane.gradle-freeplane-plugin'
 
 dependencies {
-	implementation 'org.codehaus.groovy:groovy-all:3.0.8'
-	implementation 'org.apache.commons:commons-text:1.9'
-	implementation 'com.squareup.okhttp3:okhttp:4.9.0'
+    implementation 'org.codehaus.groovy:groovy-all:3.0.8'
+    implementation 'org.apache.commons:commons-text:1.9'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.0'
 }
 
 freeplane {
-	// mandatory, freeplane installation directory.
-	// (Freeplane.app directory on MacOS)
-	// In this example it is taken from system environment.
-	freeplaneDirectory = System.env.FREEPLANE_DIR
+    // mandatory, freeplane installation directory.
+    // (Freeplane.app directory on MacOS)
+    // In this example it is taken from system environment.
+    freeplaneDirectory = System.env.FREEPLANE_DIR
 
-	// optional, addon source directory
-	addonSourceDirectory = 'src/addon'
+    // optional, addon source directory
+    addonSourceDirectory = 'src/addon'
 
-	// optional, to be set only if more then one mind map file in the addon source directory
-	// addonDefinitionMindMapFileName = 'Greetings.mm'
+    // optional, to be set only if more then one mind map file in the addon source directory
+    // addonDefinitionMindMapFileName = 'Greetings.mm'
 
-	// optional, includes
-	// includes = ['**/*']
+    // optional, includes
+    // includes = ['**/*']
 
-	// optional, excludes
-	// excludes = ['**/*.bak', '**/~*', '**/$~*.mm~', '**/*.gdsl', '**/*.dsld']
+    // optional, excludes
+    // excludes = ['**/*.bak', '**/~*', '**/$~*.mm~', '**/*.gdsl', '**/*.dsld']
 
-	// optional, max heap size for freeplane
-	// maxHeapSize = '1024m'
+    // optional, max heap size for freeplane
+    // maxHeapSize = '1024m'
 
-	// optional, freeplane user setting directory
-	// userDirectory = 'user-directory'
+    // optional, freeplane user setting directory
+    // userDirectory = 'user-directory'
 
-	// optional, additional Java Runtime options
-	// jvmArgs = []
+    // optional, additional Java Runtime options
+    // jvmArgs = []
 
 }
 
+spotless {
+    format 'misc', {
+        target '*.md', '.gitignore'
+
+        trimTrailingWhitespace()
+        indentWithSpaces()
+        endWithNewline()
+    }
+    groovy {
+        greclipse().configFile('spotless.eclipseformat.xml')
+    }
+    groovyGradle {
+        target '*.gradle'
+        greclipse().configFile('spotless.eclipseformat.xml')
+    }
+}
+
 jar {
-	archiveFileName = 'freeplane-zotero.jar'
-	// Add dependencies (excluding Freeplane itself) to the jar:
-	from {
-		configurations.compileClasspath.collect {
-			if (!it.toString().startsWith(System.env.FREEPLANE_DIR)) {
-				return it.isDirectory() ? it : zipTree(it)
-			}
-		}
-	}
+    archiveFileName = 'freeplane-zotero.jar'
+    // Add dependencies (excluding Freeplane itself) to the jar:
+    from {
+        configurations.compileClasspath.collect {
+            if (!it.toString().startsWith(System.env.FREEPLANE_DIR)) {
+                return it.isDirectory() ? it : zipTree(it)
+            }
+        }
+    }
 }

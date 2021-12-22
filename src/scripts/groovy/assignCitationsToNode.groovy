@@ -17,10 +17,14 @@ import com.petervelosy.freeplanezotero.Constants
 def zotero = new Zotero(ui, logger, c, map)
 
 if (!zotero.getDocumentProperty(Constants.STORAGE_KEY_DOCUMENT_ID, node)) {
-  UUID uu = UUID.randomUUID()
-  node.mindMap.storage[Constants.STORAGE_KEY_DOCUMENT_ID] = uu.toString()
-  node.mindMap.storage[Constants.STORAGE_KEY_DOCUMENT_DATA] = ""
-  menuUtils.executeMenuItems(['ShowSelectedAttributesAction'])
+    UUID uu = UUID.randomUUID()
+    node.mindMap.storage[Constants.STORAGE_KEY_DOCUMENT_ID] = uu.toString()
+    node.mindMap.storage[Constants.STORAGE_KEY_DOCUMENT_DATA] = ""
+    // Set node attribute display mode to "Show selected attributes only". This is to hide the long
+    // citation attributes that would otherwise clutter the display
+    menuUtils.executeMenuItems([
+        'ShowSelectedAttributesAction'
+    ])
 }
 logger.info("Starting with document ID ${zotero.getDocumentProperty(Constants.STORAGE_KEY_DOCUMENT_ID, node)}")
 logger.info("Document properties: ${zotero.propertiesToObj(node.mindMap.storage).toString()}")
