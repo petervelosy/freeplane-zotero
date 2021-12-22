@@ -9,11 +9,12 @@
 // TODO: hierarchical node numbering?
 // TODO: copy citations from parent
 // TODO: sign scripts
+// TODO: test multi-select scenarios
 
 import com.petervelosy.freeplanezotero.Zotero
 import com.petervelosy.freeplanezotero.Constants
 
-def zotero = new Zotero(ui, logger)
+def zotero = new Zotero(ui, logger, c, map)
 
 if (!zotero.getDocumentProperty(Constants.STORAGE_KEY_DOCUMENT_ID, node)) {
   UUID uu = UUID.randomUUID()

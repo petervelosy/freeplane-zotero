@@ -3,6 +3,6 @@
 import com.petervelosy.freeplanezotero.Zotero
 import static com.petervelosy.freeplanezotero.Constants.*
 
-def zotero = new Zotero(ui, logger)
+def zotero = new Zotero(ui, logger, c, map)
 
 zotero.executeApiCommand('refresh', node)

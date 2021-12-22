@@ -3,7 +3,7 @@
 import com.petervelosy.freeplanezotero.Zotero
 import com.petervelosy.freeplanezotero.Constants
 
-def zotero = new Zotero(ui, logger)
+def zotero = new Zotero(ui, logger, c, map)
 
 node[Constants.NODE_ATTRIBUTE_CITATIONS] = null
 node.link.remove() // TODO: Only remove if it is a Zotero link

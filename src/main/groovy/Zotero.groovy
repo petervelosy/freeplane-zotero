@@ -18,13 +18,17 @@ class Zotero {
 
 	private ui
 	private logger
+	private controller
+	private map
 	private JsonSlurper jsonSlurper
 	private OkHttpClient client
 	private zoteroProcessing = false
 
-	Zotero(ui, logger) {
+	Zotero(ui, logger, controller, map) {
 		this.ui = ui
 		this.logger = logger
+		this.controller = controller
+		this.map = map
 		this.jsonSlurper = new JsonSlurper()
 		// We need a reasonably long read timeout, since we need to keep the connection open
 		// until the user chooses a citation:
@@ -95,9 +99,14 @@ class Zotero {
 				node[NODE_ATTRIBUTE_CITATIONS] = "{}"
 				return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, [text: "", code: node[NODE_ATTRIBUTE_CITATIONS].toString(), id: node.id, noteIndex: 0])
 			case "Document.getFields":
-				return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, [
-					[text: parseCitationTextFromNode(node).citation, code: node[NODE_ATTRIBUTE_CITATIONS].toString(), id: node.id, noteIndex: 0]
-				])
+				def fields = this.controller.findAll().findResults { n -> 
+					if (n[NODE_ATTRIBUTE_CITATIONS]) {
+						return [text: parseCitationTextFromNode(n).citation, code: n[NODE_ATTRIBUTE_CITATIONS].toString(), id: n.id, noteIndex: 0]
+					} else {
+						return null
+					}
+				}
+				return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, fields)
 			case "Document.displayAlert":
 				def message = res.arguments[1]
 				def icon = res.arguments[2]
@@ -134,7 +143,7 @@ class Zotero {
 						}
 						break
 					case ZOTERO_DIALOG_BUTTONS_OK:
-						ui.informationMessage(message, "", javaIconId)
+						ui.informationMessage(null, message, "", javaIconId)
 						return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, 1)
 				}
 				break
@@ -149,34 +158,41 @@ class Zotero {
 				return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, null)
 			case "Field.delete":
 				def fieldId = res.arguments[1]
-				node.putAt(NODE_ATTRIBUTE_CITATIONS, null)
+				def referredNode = this.map.node(fieldId)
+				referredNode.putAt(NODE_ATTRIBUTE_CITATIONS, null)
 				return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, null)
 			case "Field.removeCode":
 				def fieldId = res.arguments[1]
-				node.putAt(NODE_ATTRIBUTE_CITATIONS, "")
+				def referredNode = this.map.node(fieldId)
+				referredNode.putAt(NODE_ATTRIBUTE_CITATIONS, "")
 				return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, null)
 			case "Field.setCode":
+				def fieldId = res.arguments[1]
 				def fieldCode = res.arguments[2]
-				node.putAt(NODE_ATTRIBUTE_CITATIONS, fieldCode)
+				def referredNode = this.map.node(fieldId)
+				referredNode.putAt(NODE_ATTRIBUTE_CITATIONS, fieldCode)
 				if (fieldCode.startsWith(FIELD_CODE_PREFIX_CSL)) {
 					def csl = parseCslFieldCode(fieldCode)
 					def itemIds = extractItemIdsFromCsl(csl)
 					def link = generateLocalZoteroLinkFromItemIds(itemIds)
-					node.link.setUri(new URI(link))
+					referredNode.link.setUri(new URI(link))
 				}
 				return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, null)
 			case "Field.getText":
 				def fieldId = res.arguments[1]
-				return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, parseCitationTextFromNode(node).citation)
+				def referredNode = this.map.node(fieldId)
+				return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, parseCitationTextFromNode(referredNode).citation)
 			case "Field.setText":
-			// TODO: Parse rich text
-				boolean richText = res.arguments[3]
+				def fieldId = res.arguments[1]
 				String newCitationText = res.arguments[2]
+				// TODO: Parse rich text
+				boolean richText = res.arguments[3]
 				if (richText) {
 					newCitationText = StringEscapeUtils.unescapeHtml4(newCitationText)
 				}
-				def nodeTextParts = parseCitationTextFromNode(node)
-				node.text = "${nodeTextParts.title} [${newCitationText}]"
+				def referredNode = this.map.node(fieldId)
+				def nodeTextParts = parseCitationTextFromNode(referredNode)
+				referredNode.text = "${nodeTextParts.title} [${newCitationText}]"
 				return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, null)
 			default:
 				throw new Exception("Unable to parse Zotero request ${res.command}. Please check Freeplane's log file for details.")
