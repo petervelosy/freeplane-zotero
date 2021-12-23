@@ -26,7 +26,6 @@ dependencies {
 freeplane {
     // mandatory, freeplane installation directory.
     // (Freeplane.app directory on MacOS)
-    // In this example it is taken from system environment.
     freeplaneDirectory = System.env.FREEPLANE_DIR
 
     // optional, addon source directory
@@ -44,8 +43,8 @@ freeplane {
     // optional, max heap size for freeplane
     // maxHeapSize = '1024m'
 
-    // optional, freeplane user setting directory
-    // userDirectory = 'user-directory'
+    // freeplane user setting directory
+    userDirectory = System.env.FREEPLANE_USER_DIR
 
     // optional, additional Java Runtime options
     // jvmArgs = []

@@ -1,7 +1,6 @@
 // @ExecutionModes({on_selected_node="/node_popup/Zotero"})
 
-// TODO: create two menu items (only the first ExecutionModes gets parsed)
-// TODO: implement "Refresh all citations"
+// TODO: create two menu items - popup+main menu (only the first 'ExecutionModes' gets parsed)
 // TODO: Ability to transform links from online to offline
 // TODO: Only add a link automatically if no link exists or the link is a Zotero link
 // TODO: Handle access control errors -> notify the user to set script permissions in Freeplane

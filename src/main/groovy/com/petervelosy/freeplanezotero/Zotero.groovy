@@ -47,9 +47,9 @@ class Zotero {
             while (zoteroProcessing) {
                 response = executeZoteroCommandInResponse(response, client, node)
             }
-            logger.info("Citation add/edit process finished.")
+            logger.info("API transaction ${command} finished.")
         } catch (ConnectException e) {
-            throw new Exception("Unable to connect to the Zotero HTTP API. Please ensure Zotero is running.", e)
+            throw new ZoteroIntegrationException("Unable to connect to the Zotero HTTP API. Please ensure Zotero is running.", e)
         } catch (ApiException e) {
             if (e.message == "Integration transaction is already in progress") {
                 throw new ZoteroIntegrationException("The last Zotero interaction did not complete successfully, therefore, Zotero's integration API is in an unknown state. Please restart Zotero and try again.", e)
@@ -152,7 +152,6 @@ class Zotero {
             case "Document.complete":
                 zoteroProcessing = false
                 break
-            // FIXME: Field methods currently only work on the current node
             case "Field.select":
                 def fieldId = res.arguments[1]
                 return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, null)
@@ -185,7 +184,7 @@ class Zotero {
             case "Field.setText":
                 def fieldId = res.arguments[1]
                 String newCitationText = res.arguments[2]
-            // TODO: Parse rich text
+                // TODO: Parse rich text
                 boolean richText = res.arguments[3]
                 if (richText) {
                     newCitationText = StringEscapeUtils.unescapeHtml4(newCitationText)

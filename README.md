@@ -15,12 +15,11 @@ A Freeplane addon which makes it possible to assign citations from Zotero (an ex
 - Execute the following commands:
 
 ```
-export FREEPLANE_DIR='...' # Put your Freeplane installation directory here, e.g. /usr/share/freeplane
+export FREEPLANE_DIR='...' # Your Freeplane installation directory, e.g. /usr/share/freeplane
+export FREEPLANE_USER_DIR='...' # Your Freeplane user settings directory without the version number suffix. (Freeplane, Tools/Open user directory)
 cd freeplane-zotero
 ./gradlew packageAddon
 ```
-
-NOTE: Due to a bug, the packageAddon task may not complete successfully, quitting with the message 'WARNING: addons.devtools.releaseAddOn_on_single_node is not a valid menu item key.'. If this happens, go to `freeplane-zotero/build/addon`, open the .mm file there with Freeplane, then manually execute Tools/Developer Tools/Package addon for publication. This will generate the installation file.
 
 - The addon installation file will be located at `freeplane-zotero/build/addon/freeplane-zotero-[version].addon.mm` . Please make sure you use the .mm file including the version number, as the other one is just a copy of the addon definition file that cannot be used for installation.
 
