@@ -9,6 +9,12 @@ A [Freeplane](https://www.freeplane.org) addon which makes it possible to assign
 
 ![Freeplane-Zotero in action](screenshot.png)
 
+## How to install
+
+- Install Freeplane and Zotero if not installed yet
+- Build or [download](https://github.com/petervelosy/freeplane-zotero/releases) the addon. Double click the .mm file to install it. (Alternatively, open Tools/Addons in Freeplane and browse for this file, then click Install)
+
+
 ## How to build
 - Download and install Freeplane Developer Tools from [this page](https://www.freeplane.org/wiki/index.php/Add-ons_(install)#Developer_Tools)
 - Clone this repository using Git
@@ -22,11 +28,6 @@ cd freeplane-zotero
 ```
 
 - The addon installation file will be located at `freeplane-zotero/build/addon/freeplane-zotero-[version].addon.mm` . Please make sure you use the .mm file including the version number, as the other one is just a copy of the addon definition file that cannot be used for installation.
-
-## How to install
-
-- Install Freeplane and Zotero if not installed yet
-- Build or [download](https://www.petervelosy.com/freeplane-zotero-current.mm) the addon. Double click the .mm file to install it. (Alternatively, open Tools/Addons in Freeplane and browse for this file, then click Install)
 
 ## Important Notice
 
