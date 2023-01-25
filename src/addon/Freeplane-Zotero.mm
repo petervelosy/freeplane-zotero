@@ -1,6 +1,6 @@
-<map version="freeplane 1.9.8">
+<map version="freeplane 1.11.1">
 <!--To view this file, download free mind mapping software Freeplane from https://www.freeplane.org -->
-<node TEXT="Freeplane-Zotero" FOLDED="false" ID="ID_696401721" CREATED="1610381621824" MODIFIED="1639888032457" LINK="https://github.com/petervelosy/freeplane-zotero" BACKGROUND_COLOR="#97c7dc" STYLE="oval">
+<node TEXT="Freeplane-Zotero" FOLDED="false" ID="ID_696401721" CREATED="1610381621824" MODIFIED="1674673874694" LINK="https://github.com/petervelosy/freeplane-zotero" BACKGROUND_COLOR="#97c7dc" STYLE="oval">
 <font SIZE="16" BOLD="true" ITALIC="true"/>
 <hook NAME="MapStyle">
     <properties edgeColorConfiguration="#808080ff,#ff0000ff,#0000ffff,#00ff00ff,#ff00ffff,#00ffffff,#7c0000ff,#00007cff,#007c00ff,#7c007cff,#007c7cff,#7c7c00ff" show_icon_for_attributes="true" associatedTemplateLocation="template:/standard-1.6.mm" show_note_icons="true" fit_to_viewport="false"/>
@@ -8,7 +8,7 @@
 <map_styles>
 <stylenode LOCALIZED_TEXT="styles.root_node" STYLE="oval" UNIFORM_SHAPE="true" VGAP_QUANTITY="24 pt">
 <font SIZE="24"/>
-<stylenode LOCALIZED_TEXT="styles.predefined" POSITION="right" STYLE="bubble">
+<stylenode LOCALIZED_TEXT="styles.predefined" POSITION="bottom_or_right" STYLE="bubble">
 <stylenode LOCALIZED_TEXT="default" ID="ID_271890427" ICON_SIZE="12 pt" COLOR="#000000" STYLE="fork">
 <arrowlink SHAPE="CUBIC_CURVE" COLOR="#000000" WIDTH="2" TRANSPARENCY="200" DASH="" FONT_SIZE="9" FONT_FAMILY="SansSerif" DESTINATION="ID_271890427" STARTARROW="DEFAULT" ENDARROW="NONE"/>
 <font NAME="SansSerif" SIZE="10" BOLD="false" ITALIC="false"/>
@@ -26,7 +26,7 @@
 </stylenode>
 <stylenode LOCALIZED_TEXT="defaultstyle.selection" BACKGROUND_COLOR="#4e85f8" BORDER_COLOR_LIKE_EDGE="false" BORDER_COLOR="#4e85f8"/>
 </stylenode>
-<stylenode LOCALIZED_TEXT="styles.user-defined" POSITION="right" STYLE="bubble">
+<stylenode LOCALIZED_TEXT="styles.user-defined" POSITION="bottom_or_right" STYLE="bubble">
 <stylenode LOCALIZED_TEXT="styles.topic" COLOR="#18898b" STYLE="fork">
 <font NAME="Liberation Sans" SIZE="10" BOLD="true"/>
 </stylenode>
@@ -41,7 +41,7 @@
 <arrowlink COLOR="#003399" TRANSPARENCY="255" DESTINATION="ID_67550811"/>
 </stylenode>
 </stylenode>
-<stylenode LOCALIZED_TEXT="styles.AutomaticLayout" POSITION="right" STYLE="bubble">
+<stylenode LOCALIZED_TEXT="styles.AutomaticLayout" POSITION="bottom_or_right" STYLE="bubble">
 <stylenode LOCALIZED_TEXT="AutomaticLayout.level.root" COLOR="#000000" STYLE="oval" SHAPE_HORIZONTAL_MARGIN="10 pt" SHAPE_VERTICAL_MARGIN="10 pt">
 <font SIZE="18"/>
 </stylenode>
@@ -70,9 +70,9 @@
 </hook>
 <hook NAME="AutomaticEdgeColor" COUNTER="11" RULE="ON_BRANCH_CREATION"/>
 <attribute NAME="name" VALUE="freeplane-zotero"/>
-<attribute NAME="version" VALUE="0.1" OBJECT="org.freeplane.features.format.FormattedNumber|0.1|#0.####"/>
+<attribute NAME="version" VALUE="v0.1" OBJECT="org.freeplane.features.format.FormattedObject|java.lang.String&amp;#x7c;v0.1|number:decimal:#0.####"/>
 <attribute NAME="author" VALUE="Peter Kristof Velosy"/>
-<attribute NAME="freeplaneVersionFrom" VALUE="1.8" OBJECT="org.freeplane.features.format.FormattedNumber|1.8"/>
+<attribute NAME="freeplaneVersionFrom" VALUE="v1.8" OBJECT="org.freeplane.features.format.FormattedObject|java.lang.String&amp;#x7c;v1.8|number:decimal:#0.####"/>
 <attribute NAME="freeplaneVersionTo" VALUE=""/>
 <attribute NAME="updateUrl" VALUE="https://github.com/petervelosy/freeplane-zotero"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
@@ -109,7 +109,7 @@
     </ul>
   </body>
 </html></richcontent>
-<node TEXT="description" POSITION="left" ID="ID_724243728" CREATED="1639818486061" MODIFIED="1639888032500">
+<node TEXT="description" POSITION="top_or_left" ID="ID_724243728" CREATED="1639818486061" MODIFIED="1639888032500">
 <edge COLOR="#ff0000"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
@@ -130,7 +130,7 @@
 </html></richcontent>
 <node TEXT="A Freeplane addon which makes it possible to assign citations from Zotero (an excellent open source reference manager) to any node on a Freeplane mind map." ID="ID_408830492" CREATED="1639885419520" MODIFIED="1639885435812"/>
 </node>
-<node TEXT="changes" POSITION="left" ID="ID_623818723" CREATED="1639818486070" MODIFIED="1639888032502">
+<node TEXT="changes" POSITION="top_or_left" ID="ID_623818723" CREATED="1639818486070" MODIFIED="1639888032502">
 <edge COLOR="#0000ff"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
@@ -144,7 +144,7 @@
   </body>
 </html></richcontent>
 </node>
-<node TEXT="license" POSITION="left" ID="ID_1385975438" CREATED="1639818486074" MODIFIED="1639888032505">
+<node TEXT="license" POSITION="top_or_left" ID="ID_1385975438" CREATED="1639818486074" MODIFIED="1639888032505">
 <edge COLOR="#00ff00"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
@@ -165,7 +165,7 @@
 </html></richcontent>
 <node TEXT="This add-on is free software: you can redistribute it and/or modify&#xa;it under the terms of the GNU General Public License as published by&#xa;the Free Software Foundation, either version 3 of the License, or&#xa;(at your option) any later version.&#xa;&#xa;This program is distributed in the hope that it will be useful,&#xa;but WITHOUT ANY WARRANTY; without even the implied warranty of&#xa;MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the&#xa;GNU General Public License for more details." ID="ID_563970406" CREATED="1639818486078" MODIFIED="1639888011580"/>
 </node>
-<node TEXT="preferences.xml" POSITION="left" ID="ID_856741949" CREATED="1639818486095" MODIFIED="1639888032508">
+<node TEXT="preferences.xml" POSITION="top_or_left" ID="ID_856741949" CREATED="1639818486095" MODIFIED="1639888032508">
 <edge COLOR="#ff00ff"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
@@ -182,7 +182,7 @@
   </body>
 </html></richcontent>
 </node>
-<node TEXT="default.properties" POSITION="left" ID="ID_998145115" CREATED="1639818486101" MODIFIED="1639888032511">
+<node TEXT="default.properties" POSITION="top_or_left" ID="ID_998145115" CREATED="1639818486101" MODIFIED="1639888032511">
 <edge COLOR="#00ffff"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
@@ -204,7 +204,7 @@
   </body>
 </html></richcontent>
 </node>
-<node TEXT="translations" POSITION="left" ID="ID_491960841" CREATED="1639818486106" MODIFIED="1639888032515">
+<node TEXT="translations" POSITION="top_or_left" ID="ID_491960841" CREATED="1639818486106" MODIFIED="1639888032515">
 <edge COLOR="#7c0000"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
@@ -235,7 +235,7 @@
 <attribute NAME="addons.${name}.refreshCitations" VALUE="Refresh all citations"/>
 </node>
 </node>
-<node TEXT="deinstall" POSITION="left" ID="ID_1682760568" CREATED="1639818486162" MODIFIED="1639888035554">
+<node TEXT="deinstall" POSITION="top_or_left" ID="ID_1682760568" CREATED="1639818486162" MODIFIED="1639888035554">
 <edge COLOR="#00007c"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
@@ -255,7 +255,7 @@
 <attribute NAME="delete" VALUE="${installationbase}/addons/${name}/scripts/zotero.groovy"/>
 <attribute NAME="delete" VALUE="${installationbase}/addons/${name}/lib/freeplane-zotero.jar"/>
 </node>
-<node TEXT="scripts" POSITION="right" ID="ID_1039352058" CREATED="1639818486184" MODIFIED="1639888032525">
+<node TEXT="scripts" POSITION="bottom_or_right" ID="ID_1039352058" CREATED="1639818486184" MODIFIED="1639888032525">
 <edge COLOR="#007c00"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
@@ -407,7 +407,7 @@
 <attribute NAME="execute_scripts_without_network_restriction" VALUE="true"/>
 </node>
 </node>
-<node TEXT="lib" POSITION="right" ID="ID_965084083" CREATED="1639818486201" MODIFIED="1639888032588">
+<node TEXT="lib" POSITION="bottom_or_right" ID="ID_965084083" CREATED="1639818486201" MODIFIED="1639888032588">
 <edge COLOR="#7c007c"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
@@ -446,7 +446,7 @@
 </html></richcontent>
 <node TEXT="freeplane-zotero.jar" ID="ID_1554347699" CREATED="1639886550289" MODIFIED="1639886558748"/>
 </node>
-<node TEXT="zips" POSITION="right" ID="ID_1000380732" CREATED="1639818486208" MODIFIED="1639888032593">
+<node TEXT="zips" POSITION="bottom_or_right" ID="ID_1000380732" CREATED="1639818486208" MODIFIED="1639888032593">
 <edge COLOR="#007c7c"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
@@ -484,7 +484,7 @@
   </body>
 </html></richcontent>
 </node>
-<node TEXT="images" POSITION="right" ID="ID_104960538" CREATED="1639818486227" MODIFIED="1639888032596">
+<node TEXT="images" POSITION="bottom_or_right" ID="ID_104960538" CREATED="1639818486227" MODIFIED="1639888032596">
 <edge COLOR="#7c7c00"/>
 <richcontent TYPE="NOTE" CONTENT-TYPE="xml/">
 <html>
