@@ -1,6 +1,6 @@
 # freeplane-zotero
 
-A Freeplane addon which makes it possible to assign citations from Zotero (an excellent open source reference manager) to any node on a Freeplane mind map.
+A [Freeplane](https://www.freeplane.org) addon which makes it possible to assign citations from [Zotero](https://www.zotero.org/) (an excellent open source reference manager) to any node on a Freeplane mind map.
 
 ## Features
 - Assign one or more citations (references) to any of your mindmap nodes
