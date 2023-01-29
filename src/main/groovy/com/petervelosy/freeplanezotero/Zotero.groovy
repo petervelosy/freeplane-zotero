@@ -1,5 +1,14 @@
 package com.petervelosy.freeplanezotero
 
+import org.sqlite.SQLiteConfig
+import org.sqlite.SQLiteOpenMode
+
+import java.nio.file.CopyOption
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.sql.Connection
+import java.sql.Driver
+
 import static Constants.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -9,8 +18,7 @@ import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import org.freeplane.api.Node
 import java.util.concurrent.TimeUnit
-import java.net.ConnectException
-import java.net.URI
+
 import org.apache.commons.text.StringEscapeUtils
 import javax.swing.JOptionPane
 
@@ -41,7 +49,7 @@ class Zotero {
     def executeApiCommand(command, node) {
         zoteroProcessing = true
 
-        def request = [command:command, docId:getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node)]
+        def request = [command: command, docId: getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node)]
         try {
             def response = postJson(ZOTERO_CONNECTOR_URL + EXEC_COMMAND_ENDPOINT, request)
             while (zoteroProcessing) {
@@ -78,9 +86,9 @@ class Zotero {
     }
 
     def executeZoteroCommandInResponse(res, OkHttpClient client, Node node) {
-        switch(res.command) {
+        switch (res.command) {
             case "Application.getActiveDocument":
-                return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, [documentID:getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node), outputFormat: "html", supportedNotes:[]])
+                return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, [documentID: getDocumentProperty(STORAGE_KEY_DOCUMENT_ID, node), outputFormat: "html", supportedNotes: []])
             case "Document.getDocumentData":
                 return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, [dataString: getDocumentProperty(STORAGE_KEY_DOCUMENT_DATA, node)])
             case "Document.setDocumentData":
@@ -112,7 +120,7 @@ class Zotero {
                 def icon = res.arguments[2]
                 def buttons = res.arguments[3]
                 def javaIconId = zoteroToJavaIconId(icon)
-                switch(buttons) {
+                switch (buttons) {
                     case ZOTERO_DIALOG_BUTTONS_OK_CANCEL:
                         def result = ui.showConfirmDialog(null, message, "", JOptionPane.OK_CANCEL_OPTION, javaIconId)
                         switch (result) {
@@ -172,7 +180,7 @@ class Zotero {
                 referredNode.putAt(NODE_ATTRIBUTE_CITATIONS, fieldCode)
                 if (fieldCode.startsWith(FIELD_CODE_PREFIX_CSL)) {
                     def csl = parseCslFieldCode(fieldCode)
-                    def itemIds = extractItemIdsFromCsl(csl)
+                    def itemIds = extractItemKeysFromCsl(csl)
                     def link = generateLocalZoteroLinkFromItemIds(itemIds)
                     referredNode.link.setUri(new URI(link))
                 }
@@ -199,7 +207,7 @@ class Zotero {
     }
 
     def zoteroToJavaIconId(iconId) {
-        switch(iconId) {
+        switch (iconId) {
             case ZOTERO_DIALOG_ICON_STOP:
                 return JOptionPane.ERROR_MESSAGE
             case ZOTERO_DIALOG_ICON_CAUTION:
@@ -225,6 +233,10 @@ class Zotero {
     }
 
     def extractItemIdsFromCsl(csl) {
+        csl.citationItems.collect { it.id }
+    }
+
+    def extractItemKeysFromCsl(csl) {
         // TODO: check if an URI is present even if the Zotero library is not synced with a cloud account
         csl.citationItems.collect { it.uris[0].split("/").last() }
     }
@@ -244,6 +256,45 @@ class Zotero {
     def getDocumentProperty(key, node) {
         // Storage values are otherwise retrieved as Convertibles. Practical as they are, they are unfortunately recursive.
         return node.mindMap.storage[key]?.toString()
+    }
+
+    def importAnnotationsOfCitedDocuments(Node node) {
+        // TODO handle no citation assigned or no annotations
+        def csl = parseCslFieldCode(node[NODE_ATTRIBUTE_CITATIONS].toString())
+        def citedWorkItemIds = extractItemIdsFromCsl(csl)
+        def citedWorksItemIdsStr = citedWorkItemIds.join(", ")
+
+        // FIXME: DriverManager does not seem to be able to load the JDBC driver from Freeplane's library path for addons. Looks like a classloader issue.
+        def cls = Class.forName("org.sqlite.JDBC")
+        Driver driver = (Driver)(cls.getDeclaredConstructor().newInstance())
+        def userHome = System.getProperty("user.home")
+        def dbFileName = "${userHome}/Zotero/zotero.sqlite"
+        def dbFileTempName = dbFileName.replace(".sqlite", "_temp.sqlite")
+
+        // We need to copy Zotero's database every time, as Zotero holds an exclusive lock on it while it is running.
+        // I haven't found any SQLite JDBC options which would nevertheless allow for a read-only access
+        // TODO: need to check whether copying an open DB works on Windows...
+        def zoteroDb = new File(dbFileName)
+        def zoteroDbCopy = new File(dbFileTempName)
+        Files.copy(zoteroDb.toPath(), zoteroDbCopy.toPath(), StandardCopyOption.REPLACE_EXISTING)
+
+        Connection conn = driver.connect("jdbc:sqlite:${dbFileTempName}", new Properties())
+        def sql = "select ann.itemID as itemID, ann.comment as comment from itemAnnotations ann left join itemAttachments att on att.itemID = ann.parentItemID where att.parentItemID in(${citedWorksItemIdsStr})"
+        def stmt = conn.prepareStatement(sql)
+        def resultSet = stmt.executeQuery()
+
+        while (resultSet.next()) {
+            println(resultSet.getString("itemID"))
+            println(resultSet.getString("comment"))
+
+            // TODO: update existing notes if any
+            // TODO: handle ignored nodes if any
+            def childNode = node.createChild()
+            childNode.setAttributes([NODE_ATTRIBUTE_ANNOTATION_ITEM_ID: resultSet.getString("itemID")])
+            childNode.setText(resultSet.getString("comment"))
+        }
+
+        zoteroDbCopy.delete();
     }
 
 }
