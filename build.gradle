@@ -18,9 +18,15 @@ repositories {
 apply plugin: 'org.freeplane.gradle-freeplane-plugin'
 
 dependencies {
-    implementation 'org.codehaus.groovy:groovy-all:3.0.8'
     implementation 'org.apache.commons:commons-text:1.9'
     implementation 'com.squareup.okhttp3:okhttp:4.9.0'
+    implementation 'org.xerial:sqlite-jdbc:3.40.1.0'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
 }
 
 freeplane {
