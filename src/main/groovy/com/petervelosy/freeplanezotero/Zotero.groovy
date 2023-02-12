@@ -1,5 +1,6 @@
 package com.petervelosy.freeplanezotero
 
+import org.freeplane.plugin.script.proxy.ScriptUtils
 import org.sqlite.SQLiteConfig
 import org.sqlite.SQLiteOpenMode
 
@@ -9,7 +10,6 @@ import java.nio.file.StandardCopyOption
 import java.sql.Connection
 import java.sql.Driver
 
-import static Constants.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -279,22 +279,49 @@ class Zotero {
         Files.copy(zoteroDb.toPath(), zoteroDbCopy.toPath(), StandardCopyOption.REPLACE_EXISTING)
 
         Connection conn = driver.connect("jdbc:sqlite:${dbFileTempName}", new Properties())
-        def sql = "select ann.itemID as itemID, ann.comment as comment from itemAnnotations ann left join itemAttachments att on att.itemID = ann.parentItemID where att.parentItemID in(${citedWorksItemIdsStr})"
+        def sql = "select ann.itemID as itemID, ann.text as text, ann.comment as comment from itemAnnotations ann left join itemAttachments att on att.itemID = ann.parentItemID where att.parentItemID in(${citedWorksItemIdsStr})"
         def stmt = conn.prepareStatement(sql)
         def resultSet = stmt.executeQuery()
 
         while (resultSet.next()) {
-            println(resultSet.getString("itemID"))
-            println(resultSet.getString("comment"))
+            def itemID = resultSet.getString("itemID")
+            def highlightedText = resultSet.getString("text")
+            def comment = resultSet.getString("comment")
 
             // TODO: update existing notes if any
             // TODO: handle ignored nodes if any
-            def childNode = node.createChild()
-            childNode.setAttributes([NODE_ATTRIBUTE_ANNOTATION_ITEM_ID: resultSet.getString("itemID")])
-            childNode.setText(resultSet.getString("comment"))
+
+            // Note only: create a single level:
+            if (highlightedText.empty) {
+
+                def controller = ScriptUtils.c()
+                def nodesFound = controller.find{it[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID] == itemID && it[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment"}
+
+                if (nodesFound.empty) {
+                    def childNode = node.createChild()
+                    setAsCommentNode(childNode)
+                } else {
+                    nodesFound.each {setAsCommentNode(it)}
+                }
+
+            } else {
+                // Highlighted text and note: create two levels:
+                childNode.setAttributes([Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID: itemID, Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD: "text"])
+                childNode.setText(highlightedText)
+
+                def grandchildNode = childNode.createChild()
+                grandchildNode.setAttributes([Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID: itemID, Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD: "comment"])
+                grandchildNode.setText(comment)
+            }
         }
 
         zoteroDbCopy.delete();
+    }
+
+    private setAsCommentNode(node, itemID, comment) {
+        node.setAttributes([Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID: itemID])
+        node.setAttributes([Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD: "comment"])
+        node.setText(comment)
     }
 
 }
