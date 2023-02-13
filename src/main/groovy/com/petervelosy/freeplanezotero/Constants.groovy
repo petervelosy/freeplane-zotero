@@ -13,6 +13,7 @@ class Constants {
 
     public static final NODE_ATTRIBUTE_CITATIONS = "zotero_citations"
     public static final NODE_ATTRIBUTE_ANNOTATION_ITEM_ID = "zotero_annotation_item_id"
+    public static final NODE_ATTRIBUTE_ANNOTATION_FIELD = "zotero_annotation_field"
 
     public static final FIELD_CODE_PREFIX_CSL = "ITEM CSL_CITATION "
 

@@ -1,10 +1,7 @@
 package com.petervelosy.freeplanezotero
 
 import org.freeplane.plugin.script.proxy.ScriptUtils
-import org.sqlite.SQLiteConfig
-import org.sqlite.SQLiteOpenMode
 
-import java.nio.file.CopyOption
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.sql.Connection
@@ -21,6 +18,8 @@ import java.util.concurrent.TimeUnit
 
 import org.apache.commons.text.StringEscapeUtils
 import javax.swing.JOptionPane
+
+import static com.petervelosy.freeplanezotero.Constants.*;
 
 class Zotero {
 
@@ -259,14 +258,17 @@ class Zotero {
     }
 
     def importAnnotationsOfCitedDocuments(Node node) {
-        // TODO handle no citation assigned or no annotations
+        // TODO add link to annotation
+        if (!nodeHasCitations(node)) {
+            throw new ZoteroIntegrationException("Please assign at least one citation to this node in order to be able to import the annotations in the cited document(s).")
+        }
         def csl = parseCslFieldCode(node[NODE_ATTRIBUTE_CITATIONS].toString())
         def citedWorkItemIds = extractItemIdsFromCsl(csl)
         def citedWorksItemIdsStr = citedWorkItemIds.join(", ")
 
         // FIXME: DriverManager does not seem to be able to load the JDBC driver from Freeplane's library path for addons. Looks like a classloader issue.
         def cls = Class.forName("org.sqlite.JDBC")
-        Driver driver = (Driver)(cls.getDeclaredConstructor().newInstance())
+        Driver driver = (Driver) (cls.getDeclaredConstructor().newInstance())
         def userHome = System.getProperty("user.home")
         def dbFileName = "${userHome}/Zotero/zotero.sqlite"
         def dbFileTempName = dbFileName.replace(".sqlite", "_temp.sqlite")
@@ -276,52 +278,87 @@ class Zotero {
         // TODO: need to check whether copying an open DB works on Windows...
         def zoteroDb = new File(dbFileName)
         def zoteroDbCopy = new File(dbFileTempName)
-        Files.copy(zoteroDb.toPath(), zoteroDbCopy.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        try {
+            Files.copy(zoteroDb.toPath(), zoteroDbCopy.toPath(), StandardCopyOption.REPLACE_EXISTING)
 
-        Connection conn = driver.connect("jdbc:sqlite:${dbFileTempName}", new Properties())
-        def sql = "select ann.itemID as itemID, ann.text as text, ann.comment as comment from itemAnnotations ann left join itemAttachments att on att.itemID = ann.parentItemID where att.parentItemID in(${citedWorksItemIdsStr})"
-        def stmt = conn.prepareStatement(sql)
-        def resultSet = stmt.executeQuery()
+            try (Connection conn = driver.connect("jdbc:sqlite:${dbFileTempName}", new Properties())) {
+                def sql = "select ann.itemID as itemID, ann.text as text, ann.comment as comment from itemAnnotations ann left join itemAttachments att on att.itemID = ann.parentItemID where att.parentItemID in(${citedWorksItemIdsStr})"
+                def stmt = conn.prepareStatement(sql)
+                def resultSet = stmt.executeQuery()
 
-        while (resultSet.next()) {
-            def itemID = resultSet.getString("itemID")
-            def highlightedText = resultSet.getString("text")
-            def comment = resultSet.getString("comment")
-
-            // TODO: update existing notes if any
-            // TODO: handle ignored nodes if any
-
-            // Note only: create a single level:
-            if (highlightedText.empty) {
-
-                def controller = ScriptUtils.c()
-                def nodesFound = controller.find{it[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID] == itemID && it[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment"}
-
-                if (nodesFound.empty) {
-                    def childNode = node.createChild()
-                    setAsCommentNode(childNode)
-                } else {
-                    nodesFound.each {setAsCommentNode(it)}
+                if (!resultSet.isBeforeFirst() && resultSet.getRow() == 0) {
+                    JOptionPane.showMessageDialog("This document has no annotations.")
                 }
+                while (resultSet.next()) {
+                    def itemID = resultSet.getString("itemID")
+                    def highlightedText = resultSet.getString("text")
+                    def comment = resultSet.getString("comment")
 
-            } else {
-                // Highlighted text and note: create two levels:
-                childNode.setAttributes([Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID: itemID, Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD: "text"])
-                childNode.setText(highlightedText)
+                    // TODO: update existing notes if any
+                    // TODO: handle ignored nodes if any
 
-                def grandchildNode = childNode.createChild()
-                grandchildNode.setAttributes([Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID: itemID, Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD: "comment"])
-                grandchildNode.setText(comment)
+                    def controller = ScriptUtils.c()
+
+                    // Note only: create a single level:
+                    if (!highlightedText) {
+
+                        def nodesFound = controller.find { it[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
+
+                        if (nodesFound.empty) {
+                            def childNode = node.createChild()
+                            setAsCommentNode(childNode, itemID, comment)
+                        } else {
+                            nodesFound.each { setAsCommentNode(it) }
+                        }
+
+                    } else {
+
+                        // Highlighted text and optional note: create two levels:
+
+                        def textNodesFound = controller.find { it[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] == "text" }
+                        def textNodes = []
+                        if (textNodesFound.empty) {
+                            def childNode = node.createChild()
+                            setAsAnnotationTextNode(childNode, itemID, highlightedText)
+                            textNodes.add(childNode)
+                        } else {
+                            textNodesFound.each { setAsAnnotationTextNode(it, itemID, highlightedText) }
+                            textNodes.addAll(textNodesFound)
+                        }
+
+                        if (comment) {
+                            def commentNodesFound = controller.find { it[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
+                            if (commentNodesFound.empty) {
+                                textNodes.each { textNode ->
+                                    def childNode = textNode.createChild()
+                                    setAsCommentNode(childNode, itemID, comment)
+                                }
+                            } else {
+                                commentNodesFound.each { setAsCommentNode(it, itemID, comment) }
+                            }
+                        }
+                    }
+                }
             }
+        } finally {
+            zoteroDbCopy.delete();
         }
+    }
 
-        zoteroDbCopy.delete();
+    private setAsAnnotationTextNode(node, itemID, text) {
+        node[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID] = itemID
+        node[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] = "text"
+        node.setText(text)
     }
 
     private setAsCommentNode(node, itemID, comment) {
-        node.setAttributes([Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID: itemID])
-        node.setAttributes([Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD: "comment"])
+        node[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID] = itemID
+        node[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] = "comment"
         node.setText(comment)
+    }
+
+    private nodeHasCitations(node) {
+        return !!node[NODE_ATTRIBUTE_CITATIONS]
     }
 
 }
