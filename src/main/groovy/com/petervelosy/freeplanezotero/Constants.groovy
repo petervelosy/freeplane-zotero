@@ -26,5 +26,5 @@ class Constants {
     public static final ZOTERO_DIALOG_BUTTONS_YES_NO = 2
     public static final ZOTERO_DIALOG_BUTTONS_YES_NO_CANCEL = 3
 
-    public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
+    public static final MediaType JSON = MediaType.get("application/json; charset=utf-8")
 }

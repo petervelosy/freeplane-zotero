@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 import org.apache.commons.text.StringEscapeUtils
 import javax.swing.JOptionPane
 
-import static com.petervelosy.freeplanezotero.Constants.*;
+import static com.petervelosy.freeplanezotero.Constants.*
 
 class Zotero {
 
@@ -41,7 +41,7 @@ class Zotero {
         // until the user chooses a citation:
         this.client = new OkHttpClient.Builder()
                 .readTimeout(1, TimeUnit.MINUTES)
-                .build();
+                .build()
     }
 
 
@@ -66,19 +66,19 @@ class Zotero {
         }
     }
 
-    def postJson(url, groovyObj) {
+    def postJson(String url, groovyObj) {
         logger.info("Request to URL ${url}: ${groovyObj.toString()}")
         String json = JsonOutput.toJson(groovyObj)
         RequestBody body = RequestBody.create(JSON, json)
         Request request = new Request.Builder()
                 .url(url)
                 .post(body)
-                .build();
+                .build()
         Response response = client.newCall(request).execute()
         String respStr = response.body().string()
         logger.info("Response: ${respStr}")
         if (response.successful) {
-            return jsonSlurper.parseText(respStr);
+            return jsonSlurper.parseText(respStr)
         } else {
             throw new ApiException(respStr)
         }
@@ -106,7 +106,7 @@ class Zotero {
                 node[NODE_ATTRIBUTE_CITATIONS] = "{}"
                 return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, [text: "", code: node[NODE_ATTRIBUTE_CITATIONS].toString(), id: node.id, noteIndex: 0])
             case "Document.getFields":
-                def fields = this.controller.findAll().findResults { n ->
+                def fields = this.controller.findAll().findResults { Node n ->
                     if (n[NODE_ATTRIBUTE_CITATIONS]) {
                         return [text: parseCitationTextFromNode(n).citation, code: n[NODE_ATTRIBUTE_CITATIONS].toString(), id: n.id, noteIndex: 0]
                     } else {
@@ -165,18 +165,18 @@ class Zotero {
             case "Field.delete":
                 def fieldId = res.arguments[1]
                 def referredNode = this.map.node(fieldId)
-                referredNode.putAt(NODE_ATTRIBUTE_CITATIONS, null)
+                referredNode[NODE_ATTRIBUTE_CITATIONS] = null
                 return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, null)
             case "Field.removeCode":
                 def fieldId = res.arguments[1]
                 def referredNode = this.map.node(fieldId)
-                referredNode.putAt(NODE_ATTRIBUTE_CITATIONS, "")
+                referredNode[NODE_ATTRIBUTE_CITATIONS] = ""
                 return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, null)
             case "Field.setCode":
                 def fieldId = res.arguments[1]
-                def fieldCode = res.arguments[2]
+                String fieldCode = res.arguments[2]
                 def referredNode = this.map.node(fieldId)
-                referredNode.putAt(NODE_ATTRIBUTE_CITATIONS, fieldCode)
+                referredNode[NODE_ATTRIBUTE_CITATIONS] = fieldCode
                 if (fieldCode.startsWith(FIELD_CODE_PREFIX_CSL)) {
                     def csl = parseCslFieldCode(fieldCode)
                     def itemIds = extractItemKeysFromCsl(csl)
@@ -186,7 +186,7 @@ class Zotero {
                 return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, null)
             case "Field.getText":
                 def fieldId = res.arguments[1]
-                def referredNode = this.map.node(fieldId)
+                Node referredNode = this.map.node(fieldId)
                 return postJson(ZOTERO_CONNECTOR_URL + RESPOND_ENDPOINT, parseCitationTextFromNode(referredNode).citation)
             case "Field.setText":
                 def fieldId = res.arguments[1]
@@ -287,7 +287,7 @@ class Zotero {
                 def resultSet = stmt.executeQuery()
 
                 if (!resultSet.isBeforeFirst() && resultSet.getRow() == 0) {
-                    JOptionPane.showMessageDialog("This document has no annotations.")
+                    JOptionPane.showMessageDialog(null, "This document has no annotations.")
                 }
                 while (resultSet.next()) {
                     def itemID = resultSet.getString("itemID")
@@ -302,20 +302,20 @@ class Zotero {
                     // Note only: create a single level:
                     if (!highlightedText) {
 
-                        def nodesFound = controller.find { it[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
+                        def nodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
 
                         if (nodesFound.empty) {
                             def childNode = node.createChild()
                             setAsCommentNode(childNode, itemID, comment)
                         } else {
-                            nodesFound.each { setAsCommentNode(it) }
+                            nodesFound.each { setAsCommentNode(it, itemID, comment) }
                         }
 
                     } else {
 
                         // Highlighted text and optional note: create two levels:
 
-                        def textNodesFound = controller.find { it[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] == "text" }
+                        def textNodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "text" }
                         def textNodes = []
                         if (textNodesFound.empty) {
                             def childNode = node.createChild()
@@ -327,9 +327,9 @@ class Zotero {
                         }
 
                         if (comment) {
-                            def commentNodesFound = controller.find { it[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
+                            def commentNodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
                             if (commentNodesFound.empty) {
-                                textNodes.each { textNode ->
+                                textNodes.each { Node textNode ->
                                     def childNode = textNode.createChild()
                                     setAsCommentNode(childNode, itemID, comment)
                                 }
@@ -341,19 +341,19 @@ class Zotero {
                 }
             }
         } finally {
-            zoteroDbCopy.delete();
+            zoteroDbCopy.delete()
         }
     }
 
     private setAsAnnotationTextNode(node, itemID, text) {
-        node[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID] = itemID
-        node[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] = "text"
+        node[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID] = itemID
+        node[NODE_ATTRIBUTE_ANNOTATION_FIELD] = "text"
         node.setText(text)
     }
 
     private setAsCommentNode(node, itemID, comment) {
-        node[Constants.NODE_ATTRIBUTE_ANNOTATION_ITEM_ID] = itemID
-        node[Constants.NODE_ATTRIBUTE_ANNOTATION_FIELD] = "comment"
+        node[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID] = itemID
+        node[NODE_ATTRIBUTE_ANNOTATION_FIELD] = "comment"
         node.setText(comment)
     }
 

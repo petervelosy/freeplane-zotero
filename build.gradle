@@ -71,10 +71,11 @@ spotless {
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     archiveFileName = 'freeplane-zotero.jar'
+    String freeplaneDir = System.env.FREEPLANE_DIR
     // Add dependencies (excluding Freeplane itself) to the jar:
     from {
         configurations.compileClasspath.collect {
-            if (!it.toString().startsWith(System.env.FREEPLANE_DIR)) {
+            if (!it.toString().startsWith(freeplaneDir)) {
                 return it.isDirectory() ? it : zipTree(it)
             }
         }
