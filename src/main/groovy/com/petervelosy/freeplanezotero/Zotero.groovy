@@ -299,9 +299,8 @@ class Zotero {
 
                     def controller = ScriptUtils.c()
 
-                    // Note only: create a single level:
-                    if (!highlightedText) {
-
+                    // Note (comment) only: create a single level:
+                    if (!highlightedText && !isAnnotationIgnored(itemID, "comment")) {
                         def nodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
 
                         if (nodesFound.empty) {
@@ -310,28 +309,37 @@ class Zotero {
                         } else {
                             nodesFound.each { setAsCommentNode(it, itemID, comment) }
                         }
-
                     } else {
 
-                        // Highlighted text and optional note: create two levels:
+                        // Highlighted text and optional note (comment): create two levels:
 
-                        def textNodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "text" }
                         def textNodes = []
-                        if (textNodesFound.empty) {
-                            def childNode = node.createChild()
-                            setAsAnnotationTextNode(childNode, itemID, highlightedText)
-                            textNodes.add(childNode)
-                        } else {
-                            textNodesFound.each { setAsAnnotationTextNode(it, itemID, highlightedText) }
-                            textNodes.addAll(textNodesFound)
+                        def textIgnored = isAnnotationIgnored(itemID, "text")
+                        if (!textIgnored) {
+                            def textNodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "text" }
+                            if (textNodesFound.empty) {
+                                def childNode = node.createChild()
+                                setAsAnnotationTextNode(childNode, itemID, highlightedText)
+                                textNodes.add(childNode)
+                            } else {
+                                textNodesFound.each { setAsAnnotationTextNode(it, itemID, highlightedText) }
+                                textNodes.addAll(textNodesFound)
+                            }
                         }
 
-                        if (comment) {
+                        def commentIgnored = isAnnotationIgnored(itemID, "comment")
+                        if (comment && !commentIgnored) {
                             def commentNodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
                             if (commentNodesFound.empty) {
-                                textNodes.each { Node textNode ->
-                                    def childNode = textNode.createChild()
+                                if (textIgnored) {
+                                    // Attach node directly to the node with the citation:
+                                    def childNode = node.createChild()
                                     setAsCommentNode(childNode, itemID, comment)
+                                } else {
+                                    textNodes.each { Node textNode ->
+                                        def childNode = textNode.createChild()
+                                        setAsCommentNode(childNode, itemID, comment)
+                                    }
                                 }
                             } else {
                                 commentNodesFound.each { setAsCommentNode(it, itemID, comment) }
@@ -343,6 +351,12 @@ class Zotero {
         } finally {
             zoteroDbCopy.delete()
         }
+    }
+
+    private boolean isAnnotationIgnored(itemId, field) {
+        def ignoreListKey = "[${itemId}:${field}]"
+        def ignored = map.storage["zotero_annotation_ignore_list"] && map.storage["zotero_annotation_ignore_list"].contains(ignoreListKey)
+        return ignored
     }
 
     private setAsAnnotationTextNode(node, itemID, text) {
