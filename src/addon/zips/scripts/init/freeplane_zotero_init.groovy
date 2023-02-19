@@ -22,10 +22,13 @@ class NodeDeletionListener implements IMapChangeListener {
         final IAttributeTableModel attributes = NodeAttributeTableModel.getModel(nodeModel);
 
         // TODO: replace map keys with constants:
-        def annItemIdAttribute = attributes.getAttributes().stream().filter(attr -> attr.getName().equals("zotero_annotation_item_id")).findAny().get()
-        def annFieldAttribute = attributes.getAttributes().stream().filter(attr -> attr.getName().equals("zotero_annotation_field")).findAny().get()
+        def oAnnItemIdAttribute = attributes.getAttributes().stream().filter(attr -> attr.getName().equals("zotero_annotation_item_id")).findAny()
+        def oAnnFieldAttribute = attributes.getAttributes().stream().filter(attr -> attr.getName().equals("zotero_annotation_field")).findAny()
 
-        if (annItemIdAttribute) {
+        if (oAnnItemIdAttribute.isPresent() && oAnnFieldAttribute.isPresent()) {
+
+            def annItemIdAttribute = oAnnItemIdAttribute.get()
+            def annFieldAttribute = oAnnFieldAttribute.get()
 
             def map = ScriptUtils.node().map
 

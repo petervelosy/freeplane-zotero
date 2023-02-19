@@ -282,7 +282,7 @@ class Zotero {
             Files.copy(zoteroDb.toPath(), zoteroDbCopy.toPath(), StandardCopyOption.REPLACE_EXISTING)
 
             try (Connection conn = driver.connect("jdbc:sqlite:${dbFileTempName}", new Properties())) {
-                def sql = "select ann.itemID as itemID, ann.text as text, ann.comment as comment from itemAnnotations ann left join itemAttachments att on att.itemID = ann.parentItemID where att.parentItemID in(${citedWorksItemIdsStr})"
+                def sql = "select ann.itemID as itemID, att.parentItemID as parentItemID, ann.text as text, ann.comment as comment, ann.pageLabel as pageLabel from itemAnnotations ann left join itemAttachments att on att.itemID = ann.parentItemID where att.parentItemID in(${citedWorksItemIdsStr})"
                 def stmt = conn.prepareStatement(sql)
                 def resultSet = stmt.executeQuery()
 
@@ -291,13 +291,10 @@ class Zotero {
                 }
                 while (resultSet.next()) {
                     def itemID = resultSet.getString("itemID")
+                    def parentItemID = resultSet.getString("parentItemID")
                     def highlightedText = resultSet.getString("text")
                     def comment = resultSet.getString("comment")
-
-                    // TODO: update existing notes if any
-                    // TODO: handle ignored nodes if any
-
-                    def controller = ScriptUtils.c()
+                    def pageLabel = resultSet.getString("pageLabel")
 
                     // Note (comment) only: create a single level:
                     if (!highlightedText && !isAnnotationIgnored(itemID, "comment")) {
@@ -319,10 +316,10 @@ class Zotero {
                             def textNodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "text" }
                             if (textNodesFound.empty) {
                                 def childNode = node.createChild()
-                                setAsAnnotationTextNode(childNode, itemID, highlightedText)
+                                setAsAnnotationTextNode(childNode, itemID, highlightedText, node, parentItemID, pageLabel)
                                 textNodes.add(childNode)
                             } else {
-                                textNodesFound.each { setAsAnnotationTextNode(it, itemID, highlightedText) }
+                                textNodesFound.each { setAsAnnotationTextNode(it, itemID, highlightedText, node, parentItemID, pageLabel) }
                                 textNodes.addAll(textNodesFound)
                             }
                         }
@@ -350,6 +347,8 @@ class Zotero {
             }
         } finally {
             zoteroDbCopy.delete()
+            // This refreshes all citations in the document despite the node parameter:
+            executeApiCommand('refresh', node)
         }
     }
 
@@ -359,10 +358,22 @@ class Zotero {
         return ignored
     }
 
-    private setAsAnnotationTextNode(node, itemID, text) {
+    // TODO: add page number
+    private setAsAnnotationTextNode(node, itemID, text, parentNode, citedDocumentItemId, pageLabel) {
+        def parsedCitationNode = parseCitationTextFromNode(parentNode)
         node[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID] = itemID
         node[NODE_ATTRIBUTE_ANNOTATION_FIELD] = "text"
-        node.setText(text)
+        // TODO: copy citation from parent, keep only relevant citation item, add page number, refresh all citations at the end of the import
+        node[NODE_ATTRIBUTE_CITATIONS] = generateAnnotationCsl(parentNode, citedDocumentItemId, pageLabel)
+        node.setText("\"${text}\" [${parsedCitationNode.citation}]")
+    }
+
+    private generateAnnotationCsl(parentNode, citedDocumentItemId, pageLabel) {
+        def csl = parseCslFieldCode(parentNode[NODE_ATTRIBUTE_CITATIONS].toString())
+        csl.citationItems = csl.citationItems.findAll{it -> it.itemData.id.toString() == citedDocumentItemId}
+        csl.citationItems[0].locator = pageLabel
+        csl.citationItems[0].label = "page"
+        return "${FIELD_CODE_PREFIX_CSL}${JsonOutput.toJson(csl)}"
     }
 
     private setAsCommentNode(node, itemID, comment) {
