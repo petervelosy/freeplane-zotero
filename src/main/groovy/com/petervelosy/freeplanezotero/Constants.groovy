@@ -10,6 +10,7 @@ class Constants {
 
     public static final STORAGE_KEY_DOCUMENT_ID = "zotero_document_id"
     public static final STORAGE_KEY_DOCUMENT_DATA = "zotero_document_data"
+    public static final STORAGE_KEY_ANNOTATION_IGNORE_LIST = "zotero_annotation_ignore_list"
 
     public static final NODE_ATTRIBUTE_CITATIONS = "zotero_citations"
     public static final NODE_ATTRIBUTE_ANNOTATION_ITEM_ID = "zotero_annotation_item_id"

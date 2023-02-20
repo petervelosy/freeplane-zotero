@@ -1,7 +1,5 @@
 package com.petervelosy.freeplanezotero
 
-import org.freeplane.plugin.script.proxy.ScriptUtils
-
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.sql.Connection
@@ -257,6 +255,7 @@ class Zotero {
         return node.mindMap.storage[key]?.toString()
     }
 
+    // TODO: run on all nodes of the current map
     def importAnnotationsOfCitedDocuments(Node node) {
         // TODO add link to annotation
         if (!nodeHasCitations(node)) {
@@ -296,52 +295,10 @@ class Zotero {
                     def comment = resultSet.getString("comment")
                     def pageLabel = resultSet.getString("pageLabel")
 
-                    // Note (comment) only: create a single level:
                     if (!highlightedText && !isAnnotationIgnored(itemID, "comment")) {
-                        def nodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
-
-                        if (nodesFound.empty) {
-                            def childNode = node.createChild()
-                            setAsCommentNode(childNode, itemID, comment)
-                        } else {
-                            nodesFound.each { setAsCommentNode(it, itemID, comment) }
-                        }
+                        importSingleCommentAnnotation(itemID, node, comment)
                     } else {
-
-                        // Highlighted text and optional note (comment): create two levels:
-
-                        def textNodes = []
-                        def textIgnored = isAnnotationIgnored(itemID, "text")
-                        if (!textIgnored) {
-                            def textNodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "text" }
-                            if (textNodesFound.empty) {
-                                def childNode = node.createChild()
-                                setAsAnnotationTextNode(childNode, itemID, highlightedText, node, parentItemID, pageLabel)
-                                textNodes.add(childNode)
-                            } else {
-                                textNodesFound.each { setAsAnnotationTextNode(it, itemID, highlightedText, node, parentItemID, pageLabel) }
-                                textNodes.addAll(textNodesFound)
-                            }
-                        }
-
-                        def commentIgnored = isAnnotationIgnored(itemID, "comment")
-                        if (comment && !commentIgnored) {
-                            def commentNodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
-                            if (commentNodesFound.empty) {
-                                if (textIgnored) {
-                                    // Attach node directly to the node with the citation:
-                                    def childNode = node.createChild()
-                                    setAsCommentNode(childNode, itemID, comment)
-                                } else {
-                                    textNodes.each { Node textNode ->
-                                        def childNode = textNode.createChild()
-                                        setAsCommentNode(childNode, itemID, comment)
-                                    }
-                                }
-                            } else {
-                                commentNodesFound.each { setAsCommentNode(it, itemID, comment) }
-                            }
-                        }
+                        importHighlightedTextWithCommentAnnotation(itemID, node, highlightedText, parentItemID, pageLabel, comment)
                     }
                 }
             }
@@ -352,18 +309,69 @@ class Zotero {
         }
     }
 
+    private void importSingleCommentAnnotation(itemID, Node node, comment) {
+        def nodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
+        if (nodesFound.empty) {
+            def childNode = node.createChild()
+            setAsCommentNode(childNode, itemID, comment)
+        } else {
+            nodesFound.each { setAsCommentNode(it, itemID, comment) }
+        }
+    }
+
+    private void importHighlightedTextWithCommentAnnotation(itemID, Node node, highlightedText, parentItemID, pageLabel, comment) {
+        def textNodes = []
+        def textIgnored = isAnnotationIgnored(itemID, "text")
+        if (!textIgnored) {
+            def textNodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "text" }
+            if (textNodesFound.empty) {
+                def childNode = node.createChild()
+                setAsAnnotationTextNode(childNode, itemID, highlightedText, node, parentItemID, pageLabel)
+                textNodes.add(childNode)
+            } else {
+                textNodesFound.each { setAsAnnotationTextNode(it, itemID, highlightedText, node, parentItemID, pageLabel) }
+                textNodes.addAll(textNodesFound)
+            }
+        }
+
+        def commentIgnored = isAnnotationIgnored(itemID, "comment")
+        if (comment && !commentIgnored) {
+            def commentNodesFound = controller.find { it[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID]?.toString() == itemID.toString() && it[NODE_ATTRIBUTE_ANNOTATION_FIELD] == "comment" }
+            if (commentNodesFound.empty) {
+                if (textIgnored) {
+                    // Attach node directly to the node with the citation:
+                    def childNode = node.createChild()
+                    setAsCommentNode(childNode, itemID, comment)
+                } else {
+                    textNodes.each { Node textNode ->
+                        def childNode = textNode.createChild()
+                        setAsCommentNode(childNode, itemID, comment)
+                    }
+                }
+            } else {
+                commentNodesFound.each { setAsCommentNode(it, itemID, comment) }
+            }
+        }
+    }
+
+    static void addAnnotationToIgnoreList(map, annItemIdAttribute, annFieldAttribute) {
+        if (!map.storage[STORAGE_KEY_ANNOTATION_IGNORE_LIST]) {
+            map.storage[STORAGE_KEY_ANNOTATION_IGNORE_LIST] = "[" + annItemIdAttribute.value.toString() + ":" + annFieldAttribute.value.toString() + "]"
+        } else {
+            map.storage[STORAGE_KEY_ANNOTATION_IGNORE_LIST] += (",[" + annItemIdAttribute.value.toString() + ":" + annFieldAttribute.value.toString() + "]")
+        }
+    }
+
     private boolean isAnnotationIgnored(itemId, field) {
         def ignoreListKey = "[${itemId}:${field}]"
-        def ignored = map.storage["zotero_annotation_ignore_list"] && map.storage["zotero_annotation_ignore_list"].contains(ignoreListKey)
+        def ignored = map.storage[STORAGE_KEY_ANNOTATION_IGNORE_LIST] && map.storage[STORAGE_KEY_ANNOTATION_IGNORE_LIST].contains(ignoreListKey)
         return ignored
     }
 
-    // TODO: add page number
     private setAsAnnotationTextNode(node, itemID, text, parentNode, citedDocumentItemId, pageLabel) {
         def parsedCitationNode = parseCitationTextFromNode(parentNode)
         node[NODE_ATTRIBUTE_ANNOTATION_ITEM_ID] = itemID
         node[NODE_ATTRIBUTE_ANNOTATION_FIELD] = "text"
-        // TODO: copy citation from parent, keep only relevant citation item, add page number, refresh all citations at the end of the import
         node[NODE_ATTRIBUTE_CITATIONS] = generateAnnotationCsl(parentNode, citedDocumentItemId, pageLabel)
         node.setText("\"${text}\" [${parsedCitationNode.citation}]")
     }
